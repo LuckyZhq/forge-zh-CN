@@ -44,6 +44,8 @@ Forge is a powerful command-line tool that helps you quickly bootstrap productio
 
 ### Installation
 
+[自行构建](install.md)
+
 #### From PyPI (Recommended)
 
 ```bash

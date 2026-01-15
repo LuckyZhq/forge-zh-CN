@@ -219,7 +219,108 @@ pytest -v
 
 ## 📁 生成的项目结构
 
-（此处目录结构与原文保持一致，已省略翻译，建议保留英文注释）
+```
+forge-project/
+├── app/
+│   ├── __init__.py
+│   ├── main.py              # FastAPI 应用入口点
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config/          # 配置管理
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py      # 基础配置
+│   │   │   ├── settings.py  # 设置聚合器
+│   │   │   └── modules/     # 配置模块 (app, database, jwt, cors, email, logger, redis, celery)
+│   │   │       ├── __init__.py
+│   │   │       ├── app.py
+│   │   │       ├── celery.py
+│   │   │       ├── cors.py
+│   │   │       ├── database.py
+│   │   │       ├── email.py
+│   │   │       ├── jwt.py
+│   │   │       ├── logger.py
+│   │   │       └── redis.py
+│   │   ├── database/        # 数据库连接
+│   │   │   ├── __init__.py
+│   │   │   ├── connection.py
+│   │   │   ├── dependencies.py
+│   │   │   └── mysql.py     # 数据库特定连接 (mysql/postgresql/sqlite)
+│   │   ├── redis.py         # Redis 连接管理器 (如果启用 Redis)
+│   │   ├── celery.py        # Celery 配置 (如果启用 Celery)
+│   │   ├── deps.py          # 全局依赖项
+│   │   ├── logger.py        # 日志配置
+│   │   └── security.py      # 安全工具 (密码哈希, JWT)
+│   ├── decorators/          # 自定义装饰器
+│   │   ├── __init__.py
+│   │   └── rate_limit.py    # 速率限制装饰器
+│   ├── models/              # 数据库模型
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   └── token.py         # (如果启用刷新令牌)
+│   ├── schemas/             # Pydantic 模式
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   └── token.py
+│   ├── crud/                # CRUD 操作
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   └── token.py         # (如果启用刷新令牌)
+│   ├── services/            # 业务逻辑
+│   │   ├── __init__.py
+│   │   └── auth.py
+│   ├── tasks/               # Celery 任务 (如果启用 Celery)
+│   │   ├── __init__.py      # 任务导出
+│   │   └── backup_database_task.py  # 数据库备份任务
+│   ├── routers/             # API 路由
+│   │   ├── __init__.py
+│   │   └── v1/              # API 版本 1
+│   │       ├── __init__.py  # 路由聚合器
+│   │       ├── auth.py
+│   │       └── users.py
+│   └── utils/               # 工具函数
+│       ├── __init__.py
+│       └── email.py         # (如果启用完整认证)
+├── tests/                   # 测试文件 (如果启用)
+│   ├── __init__.py
+│   ├── conftest.py          # Pytest 配置和固件
+│   ├── test_main.py         # 主 API 端点测试
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── test_auth.py     # 认证测试
+│   │   └── test_users.py    # 用户端点测试
+│   └── unit/                # 单元测试目录
+│       └── __init__.py
+├── alembic/                 # 数据库迁移 (如果启用)
+│   ├── versions/            # 迁移版本
+│   │   └── .gitkeep
+│   ├── env.py               # Alembic 环境
+│   ├── script.py.mako       # 迁移模板
+│   └── README.md
+├── static/                  # 静态文件
+│   └── email_template/      # 邮件模板 (如果启用完整认证)
+│       ├── base.html
+│       ├── verification.html
+│       ├── password_reset.html
+│       └── welcome.html
+├── script/                  # 自定义脚本目录
+├── secret/                  # 环境文件
+│   ├── .env.example         # 环境变量模板
+│   ├── .env.development     # 开发环境
+│   └── .env.production      # 生产环境
+├── .forge/                  # Forge 配置
+│   └── config.json          # 项目配置
+├── docker-compose.yml       # Docker Compose 配置 (如果启用)
+├── Dockerfile               # Docker 配置 (如果启用)
+├── .dockerignore            # Docker 忽略文件 (如果启用)
+├── .gitignore               # Git 忽略文件
+├── alembic.ini              # Alembic 配置 (如果启用迁移)
+├── pyproject.toml           # 项目依赖
+├── uv.lock                  # UV 锁文件
+├── LICENSE                  # MIT 许可证
+└── README.md                # 项目文档
+```
+
+
 
 ## 🎨 智能默认配置
 
