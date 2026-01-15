@@ -1,4 +1,4 @@
-"""usermodelgenerategenerator"""
+"""用户模型生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,36 +9,36 @@ from ..base import BaseTemplateGenerator
     priority=40,
     requires=["DatabaseConnectionGenerator"],
     enabled_when=lambda c: c.has_auth(),
-    description="Generate user model (app/models/user.py)"
+    description="生成用户模型 (app/models/user.py)"
 )
 class UserModelGenerator(BaseTemplateGenerator):
-    """usermodelFile generator"""
-    
+    """用户模型文件生成器"""
+
     def generate(self) -> None:
-        """generateusermodelfile
-        
-        Note: This generator is called by Orchestrator when authentication is enabled and database is configured
+        """生成用户模型文件
+
+        注意：当启用身份验证并配置数据库时，此生成器由编排器调用
         """
         orm_type = self.config_reader.get_orm_type()
         auth_type = self.config_reader.get_auth_type()
-        
+
         if orm_type == "SQLModel":
             self._generate_sqlmodel_user(auth_type)
         elif orm_type == "SQLAlchemy":
             self._generate_sqlalchemy_user(auth_type)
-    
+
     def _generate_sqlmodel_user(self, auth_type: str) -> None:
-        """generate SQLModel usermodel"""
+        """生成 SQLModel 用户模型"""
         imports = [
             "from datetime import datetime",
             "from typing import Optional",
             "from sqlmodel import Field, SQLModel",
         ]
-        
-        # Basic JWT Auth usermodel
+
+        # 基础 JWT 认证用户模型
         if auth_type == "basic":
             content = '''class User(SQLModel, table=True):
-    """usermodel - Basic JWT Auth"""
+    """用户模型 - 基础 JWT 认证"""
     
     __tablename__ = "users"
     
@@ -61,32 +61,32 @@ class UserModelGenerator(BaseTemplateGenerator):
             }
         }
 '''
-        
-        # Complete JWT Auth usermodel
+
+        # 完整 JWT 认证用户模型
         else:  # complete
             content = '''class User(SQLModel, table=True):
-    """usermodel - Complete JWT Auth
+    """用户模型 - 完整 JWT 认证
     
-    Contains complete authentication features:
-    - EmailValidate
-    - Passwordreset
-    - Multi-device login support (via RefreshToken table)
+    包含完整的认证功能：
+    - 邮箱验证
+    - 密码重置
+    - 多设备登录支持（通过 RefreshToken 表）
     """
     
     __tablename__ = "users"
     
-    # basefield
+    # 基础字段
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(unique=True, index=True, max_length=50)
     email: str = Field(unique=True, index=True, max_length=100)
     hashed_password: str = Field(max_length=255)
     
-    # Statusfield
+    # 状态字段
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
-    is_verified: bool = Field(default=False, description="Generate user model (app/models/user.py)")
+    is_verified: bool = Field(default=False, description="邮箱是否已验证")
     
-    # Timestamps
+    # 时间戳
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_login_at: Optional[datetime] = Field(default=None)
@@ -102,27 +102,27 @@ class UserModelGenerator(BaseTemplateGenerator):
             }
         }
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/models/user.py",
-            docstring="usermodeldefinition",
+            docstring="用户模型定义",
             imports=imports,
             content=content,
             overwrite=True
         )
-    
+
     def _generate_sqlalchemy_user(self, auth_type: str) -> None:
-        """generate SQLAlchemy usermodel"""
+        """生成 SQLAlchemy 用户模型"""
         imports = [
             "from datetime import datetime",
             "from sqlalchemy import Boolean, Column, DateTime, Integer, String",
             "from app.core.database import Base",
         ]
-        
-        # Basic JWT Auth usermodel
+
+        # 基础 JWT 认证用户模型
         if auth_type == "basic":
             content = '''class User(Base):
-    """usermodel - Basic JWT Auth"""
+    """用户模型 - 基础 JWT 认证"""
     
     __tablename__ = "users"
     
@@ -138,32 +138,32 @@ class UserModelGenerator(BaseTemplateGenerator):
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, email={self.email})>"
 '''
-        
-        # Complete JWT Auth usermodel
+
+        # 完整 JWT 认证用户模型
         else:  # complete
             content = '''class User(Base):
-    """usermodel - Complete JWT Auth
+    """用户模型 - 完整 JWT 认证
     
-    Contains complete authentication features:
-    - EmailValidate
-    - Passwordreset
-    - Multi-device login support (via RefreshToken table)
+    包含完整的认证功能：
+    - 邮箱验证
+    - 密码重置
+    - 多设备登录支持（通过 RefreshToken 表）
     """
     
     __tablename__ = "users"
     
-    # basefield
+    # 基础字段
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     
-    # Statusfield
+    # 状态字段
     is_active = Column(Boolean, default=True, nullable=False)
     is_superuser = Column(Boolean, default=False, nullable=False)
-    is_verified = Column(Boolean, default=False, nullable=False, comment="EmailwhetheralreadyValidate")
+    is_verified = Column(Boolean, default=False, nullable=False, comment="邮箱是否已验证")
     
-    # Timestamps
+    # 时间戳
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     last_login_at = Column(DateTime, nullable=True)
@@ -171,10 +171,10 @@ class UserModelGenerator(BaseTemplateGenerator):
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, email={self.email})>"
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/models/user.py",
-            docstring="usermodeldefinition",
+            docstring="用户模型定义",
             imports=imports,
             content=content,
             overwrite=True

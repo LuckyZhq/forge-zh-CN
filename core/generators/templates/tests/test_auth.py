@@ -1,4 +1,4 @@
-"""Test authentication endpoints generator"""
+"""认证端点测试生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,32 +9,32 @@ from ..base import BaseTemplateGenerator
     priority=112,
     requires=["AuthRouterGenerator"],
     enabled_when=lambda c: c.has_testing() and c.has_auth(),
-    description="Generate authentication tests (tests/api/test_auth.py)"
+    description="生成认证测试文件 (tests/api/test_auth.py)"
 )
 class TestAuthGenerator(BaseTemplateGenerator):
-    """generate test_auth.py file"""
-    
+    """生成 test_auth.py 文件"""
+
     def generate(self) -> None:
-        """generate test_auth.py"""
+        """生成 test_auth.py"""
         if not self.config_reader.has_testing() or not self.config_reader.has_auth():
             return
-        
+
         auth_type = self.config_reader.get_auth_type()
-        
+
         if auth_type == "basic":
             content = self._build_basic_auth_tests()
         else:  # complete
             content = self._build_complete_auth_tests()
-        
+
         self.file_ops.create_file(
             file_path="tests/api/test_auth.py",
             content=content,
             overwrite=True
         )
-    
+
     def _build_basic_auth_tests(self) -> str:
-        """Build basic auth tests"""
-        return '''"""Test authentication endpoints - Basic JWT Auth"""
+        """构建基础认证测试"""
+        return '''"""认证端点测试 - 基础 JWT 认证"""
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 @pytest.mark.asyncio
 async def test_register(client: AsyncClient):
-    """Test user registration"""
+    """测试用户注册"""
     response = await client.post(
         "/api/v1/auth/register",
         json={
@@ -60,7 +60,7 @@ async def test_register(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_register_duplicate_email(client: AsyncClient, test_user_verified):
-    """Test registration with duplicate email"""
+    """测试使用重复邮箱注册"""
     response = await client.post(
         "/api/v1/auth/register",
         json={
@@ -74,7 +74,7 @@ async def test_register_duplicate_email(client: AsyncClient, test_user_verified)
 
 @pytest.mark.asyncio
 async def test_login(client: AsyncClient, test_user_verified):
-    """Test user login"""
+    """测试用户登录"""
     response = await client.post(
         "/api/v1/auth/login",
         data={
@@ -90,7 +90,7 @@ async def test_login(client: AsyncClient, test_user_verified):
 
 @pytest.mark.asyncio
 async def test_login_invalid_credentials(client: AsyncClient):
-    """Test login with invalid credentials"""
+    """测试使用无效凭证登录"""
     response = await client.post(
         "/api/v1/auth/login",
         data={
@@ -103,7 +103,7 @@ async def test_login_invalid_credentials(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_get_current_user(client: AsyncClient, auth_headers):
-    """Test get current user"""
+    """测试获取当前用户"""
     response = await client.get(
         "/api/v1/users/me",
         headers=auth_headers
@@ -113,10 +113,10 @@ async def test_get_current_user(client: AsyncClient, auth_headers):
     assert "email" in data
     assert "username" in data
 '''
-    
+
     def _build_complete_auth_tests(self) -> str:
-        """Build complete auth tests"""
-        return '''"""Test authentication endpoints - Complete JWT Auth"""
+        """构建完整认证测试"""
+        return '''"""认证端点测试 - 完整 JWT 认证"""
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -124,7 +124,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 @pytest.mark.asyncio
 async def test_register(client: AsyncClient):
-    """Test user registration"""
+    """测试用户注册"""
     response = await client.post(
         "/api/v1/auth/register",
         json={
@@ -142,7 +142,7 @@ async def test_register(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_login(client: AsyncClient, test_user_verified):
-    """Test user login"""
+    """测试用户登录"""
     response = await client.post(
         "/api/v1/auth/login",
         json={
@@ -159,8 +159,8 @@ async def test_login(client: AsyncClient, test_user_verified):
 
 @pytest.mark.asyncio
 async def test_refresh_token(client: AsyncClient, test_user_verified):
-    """Test token refresh"""
-    # First login to get refresh token
+    """测试令牌刷新"""
+    # 首先登录以获取刷新令牌
     login_response = await client.post(
         "/api/v1/auth/login",
         json={
@@ -170,7 +170,7 @@ async def test_refresh_token(client: AsyncClient, test_user_verified):
     )
     refresh_token = login_response.json()["refresh_token"]
     
-    # Use refresh token to get new access token
+    # 使用刷新令牌获取新的访问令牌
     response = await client.post(
         "/api/v1/auth/refresh",
         json={"refresh_token": refresh_token}
@@ -182,7 +182,7 @@ async def test_refresh_token(client: AsyncClient, test_user_verified):
 
 @pytest.mark.asyncio
 async def test_request_password_reset(client: AsyncClient, test_user_unverified):
-    """Test password reset request"""
+    """测试密码重置请求"""
     response = await client.post(
         "/api/v1/auth/forgot-password",
         json={"email": test_user_unverified.email}
@@ -192,7 +192,7 @@ async def test_request_password_reset(client: AsyncClient, test_user_unverified)
 
 @pytest.mark.asyncio
 async def test_verify_email_request(client: AsyncClient, test_user_unverified):
-    """Test email verification request"""
+    """测试邮箱验证请求"""
     response = await client.post(
         "/api/v1/auth/resend-verification",
         json={"email": test_user_unverified.email}
@@ -202,7 +202,7 @@ async def test_verify_email_request(client: AsyncClient, test_user_unverified):
 
 @pytest.mark.asyncio
 async def test_get_current_user(client: AsyncClient, auth_headers):
-    """Test get current user"""
+    """测试获取当前用户"""
     response = await client.get(
         "/api/v1/users/me",
         headers=auth_headers

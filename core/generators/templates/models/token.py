@@ -1,4 +1,4 @@
-"""Token model generator"""
+"""令牌模型生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,62 +9,62 @@ from ..base import BaseTemplateGenerator
     priority=41,
     requires=["UserModelGenerator"],
     enabled_when=lambda c: c.get_auth_type() == 'complete',
-    description="Generate token model (app/models/token.py)"
+    description="生成令牌模型 (app/models/token.py)"
 )
 class TokenModelGenerator(BaseTemplateGenerator):
-    """Token model file generator"""
-    
+    """令牌模型文件生成器"""
+
     def generate(self) -> None:
-        """Generate Token model file
-        
-        Note: This generator is called by Orchestrator when Complete JWT Auth is enabled and database is configured
+        """生成令牌模型文件
+
+        注意：当启用完整 JWT 认证并配置数据库时，此生成器由编排器调用
         """
         orm_type = self.config_reader.get_orm_type()
-        
+
         if orm_type == "SQLModel":
             self._generate_sqlmodel_token()
         elif orm_type == "SQLAlchemy":
             self._generate_sqlalchemy_token()
-    
+
     def _generate_sqlmodel_token(self) -> None:
-        """Generate SQLModel Token model"""
+        """生成 SQLModel 令牌模型"""
         imports = [
             "from datetime import datetime",
             "from typing import Optional",
             "from sqlmodel import Field, SQLModel, Relationship",
         ]
-        
+
         content = '''class RefreshToken(SQLModel, table=True):
-    """Refresh token model
+    """刷新令牌模型
     
-    Used to manage user refresh tokens, supports:
-    - Multi-device login (one token per device)
-    - Token revocation
-    - Token expiration management
+    用于管理用户刷新令牌，支持：
+    - 多设备登录（每个设备一个令牌）
+    - 令牌撤销
+    - 令牌过期管理
     """
     
     __tablename__ = "refresh_tokens"
     
     id: Optional[int] = Field(default=None, primary_key=True)
     
-    # Associated user
+    # 关联用户
     user_id: int = Field(foreign_key="users.id", index=True)
     
-    # Token information
+    # 令牌信息
     token: str = Field(unique=True, index=True, max_length=500)
     expires_at: datetime = Field(index=True)
     
-    # Device information (optional)
+    # 设备信息（可选）
     device_name: Optional[str] = Field(default=None, max_length=100)
     device_type: Optional[str] = Field(default=None, max_length=50)  # web, mobile, desktop
-    ip_address: Optional[str] = Field(default=None, max_length=45)  # IPv6 max length 45 characters
+    ip_address: Optional[str] = Field(default=None, max_length=45)  # IPv6 最大长度 45 字符
     user_agent: Optional[str] = Field(default=None, max_length=500)
     
-    # Status
+    # 状态
     is_revoked: bool = Field(default=False, index=True)
     revoked_at: Optional[datetime] = Field(default=None)
     
-    # Timestamps
+    # 时间戳
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_used_at: Optional[datetime] = Field(default=None)
     
@@ -80,45 +80,45 @@ class TokenModelGenerator(BaseTemplateGenerator):
         }
     
     def is_valid(self) -> bool:
-        """Check if token is valid"""
+        """检查令牌是否有效"""
         if self.is_revoked:
             return False
         return datetime.utcnow() < self.expires_at
     
     def revoke(self) -> None:
-        """Revoke token"""
+        """撤销令牌"""
         self.is_revoked = True
         self.revoked_at = datetime.utcnow()
 
 
 class VerificationCode(SQLModel, table=True):
-    """Verification code model
+    """验证码模型
     
-    Used to manage email verification codes and password reset codes, supports:
-    - Verification code expiration management
-    - Verification code usage limit
-    - Verification code type distinction
+    用于管理邮箱验证码和密码重置码，支持：
+    - 验证码过期管理
+    - 验证码使用次数限制
+    - 验证码类型区分
     """
     
     __tablename__ = "verification_codes"
     
     id: Optional[int] = Field(default=None, primary_key=True)
     
-    # Associated user
+    # 关联用户
     user_id: int = Field(foreign_key="users.id", index=True)
     
-    # Verification code information
+    # 验证码信息
     code: str = Field(max_length=10, index=True)
     code_type: str = Field(max_length=20, index=True)  # email_verification, password_reset
     expires_at: datetime = Field(index=True)
     
-    # Usage status
+    # 使用状态
     is_used: bool = Field(default=False, index=True)
     used_at: Optional[datetime] = Field(default=None)
-    attempts: int = Field(default=0)  # Attempt count
-    max_attempts: int = Field(default=5)  # Maximum attempts
+    attempts: int = Field(default=0)  # 尝试次数
+    max_attempts: int = Field(default=5)  # 最大尝试次数
     
-    # Timestamps
+    # 时间戳
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     class Config:
@@ -133,7 +133,7 @@ class VerificationCode(SQLModel, table=True):
         }
     
     def is_valid(self) -> bool:
-        """Check if verification code is valid"""
+        """检查验证码是否有效"""
         if self.is_used:
             return False
         if self.attempts >= self.max_attempts:
@@ -141,122 +141,122 @@ class VerificationCode(SQLModel, table=True):
         return datetime.utcnow() < self.expires_at
     
     def increment_attempts(self) -> None:
-        """Increment attempt count"""
+        """增加尝试次数"""
         self.attempts += 1
     
     def mark_as_used(self) -> None:
-        """Mark as used"""
+        """标记为已使用"""
         self.is_used = True
         self.used_at = datetime.utcnow()
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/models/token.py",
-            docstring="Token andVerification code modeldefinition",
+            docstring="令牌和验证码模型定义",
             imports=imports,
             content=content,
             overwrite=True
         )
-    
+
     def _generate_sqlalchemy_token(self) -> None:
-        """Generate SQLAlchemy Token model"""
+        """生成 SQLAlchemy 令牌模型"""
         imports = [
             "from datetime import datetime",
             "from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String",
             "from sqlalchemy.orm import relationship",
             "from app.core.database import Base",
         ]
-        
+
         content = '''class RefreshToken(Base):
-    """Refresh token model
+    """刷新令牌模型
     
-    Used to manage user refresh tokens, supports:
-    - Multi-device login (one token per device)
-    - Token revocation
-    - Token expiration management
+    用于管理用户刷新令牌，支持：
+    - 多设备登录（每个设备一个令牌）
+    - 令牌撤销
+    - 令牌过期管理
     """
     
     __tablename__ = "refresh_tokens"
     
     id = Column(Integer, primary_key=True, index=True)
     
-    # Associated user
+    # 关联用户
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
-    # Token information
+    # 令牌信息
     token = Column(String(500), unique=True, index=True, nullable=False)
     expires_at = Column(DateTime, nullable=False, index=True)
     
-    # Device information (optional)
+    # 设备信息（可选）
     device_name = Column(String(100), nullable=True)
     device_type = Column(String(50), nullable=True)  # web, mobile, desktop
-    ip_address = Column(String(45), nullable=True)  # IPv6 max length 45 characters
+    ip_address = Column(String(45), nullable=True)  # IPv6 最大长度 45 字符
     user_agent = Column(String(500), nullable=True)
     
-    # Status
+    # 状态
     is_revoked = Column(Boolean, default=False, nullable=False, index=True)
     revoked_at = Column(DateTime, nullable=True)
     
-    # Timestamps
+    # 时间戳
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_used_at = Column(DateTime, nullable=True)
     
-    # Relationships
+    # 关系
     user = relationship("User", backref="refresh_tokens")
     
     def __repr__(self):
         return f"<RefreshToken(id={self.id}, user_id={self.user_id}, is_revoked={self.is_revoked})>"
     
     def is_valid(self) -> bool:
-        """Check if token is valid"""
+        """检查令牌是否有效"""
         if self.is_revoked:
             return False
         return datetime.utcnow() < self.expires_at
     
     def revoke(self) -> None:
-        """Revoke token"""
+        """撤销令牌"""
         self.is_revoked = True
         self.revoked_at = datetime.utcnow()
 
 
 class VerificationCode(Base):
-    """Verification code model
+    """验证码模型
     
-    Used to manage email verification codes and password reset codes, supports:
-    - Verification code expiration management
-    - Verification code usage limit
-    - Verification code type distinction
+    用于管理邮箱验证码和密码重置码，支持：
+    - 验证码过期管理
+    - 验证码使用次数限制
+    - 验证码类型区分
     """
     
     __tablename__ = "verification_codes"
     
     id = Column(Integer, primary_key=True, index=True)
     
-    # Associated user
+    # 关联用户
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
-    # Verification code information
+    # 验证码信息
     code = Column(String(10), nullable=False, index=True)
     code_type = Column(String(20), nullable=False, index=True)  # email_verification, password_reset
     expires_at = Column(DateTime, nullable=False, index=True)
     
-    # Usage status
+    # 使用状态
     is_used = Column(Boolean, default=False, nullable=False, index=True)
     used_at = Column(DateTime, nullable=True)
-    attempts = Column(Integer, default=0, nullable=False)  # Attempt count
-    max_attempts = Column(Integer, default=5, nullable=False)  # Maximum attempts
+    attempts = Column(Integer, default=0, nullable=False)  # 尝试次数
+    max_attempts = Column(Integer, default=5, nullable=False)  # 最大尝试次数
     
-    # Timestamps
+    # 时间戳
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
-    # Relationships
+    # 关系
     user = relationship("User", backref="verification_codes")
     
     def __repr__(self):
         return f"<VerificationCode(id={self.id}, user_id={self.user_id}, code_type={self.code_type})>"
     
     def is_valid(self) -> bool:
-        """Check if verification code is valid"""
+        """检查验证码是否有效"""
         if self.is_used:
             return False
         if self.attempts >= self.max_attempts:
@@ -264,18 +264,18 @@ class VerificationCode(Base):
         return datetime.utcnow() < self.expires_at
     
     def increment_attempts(self) -> None:
-        """Increment attempt count"""
+        """增加尝试次数"""
         self.attempts += 1
     
     def mark_as_used(self) -> None:
-        """Mark as used"""
+        """标记为已使用"""
         self.is_used = True
         self.used_at = datetime.utcnow()
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/models/token.py",
-            docstring="Token andVerification code modeldefinition - SQLAlchemy",
+            docstring="令牌和验证码模型定义 - SQLAlchemy",
             imports=imports,
             content=content,
             overwrite=True

@@ -1,4 +1,4 @@
-"""authentication routesgenerategenerator"""
+"""认证路由生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,26 +9,26 @@ from ..base import BaseTemplateGenerator
     priority=80,
     requires=["AuthServiceGenerator", "UserSchemaGenerator"],
     enabled_when=lambda c: c.has_auth(),
-    description="Generate authentication router (app/routers/v1/auth.py)"
+    description="生成认证路由 (app/routers/v1/auth.py)"
 )
 class AuthRouterGenerator(BaseTemplateGenerator):
-    """authentication routesFile generator"""
-    
+    """认证路由文件生成器"""
+
     def generate(self) -> None:
-        """generateauthentication routesfile"""
-        # Only generate if authentication is enabled
+        """生成认证路由文件"""
+        # 仅在启用身份验证时生成
         if not self.config_reader.has_auth():
             return
-        
+
         auth_type = self.config_reader.get_auth_type()
-        
+
         if auth_type == "basic":
             self._generate_basic_auth_router()
         else:  # complete
             self._generate_complete_auth_router()
-    
+
     def _generate_basic_auth_router(self) -> None:
-        """generate Basic JWT Auth router"""
+        """生成基础 JWT 认证路由"""
         imports = [
             "from fastapi import APIRouter, Depends, HTTPException, status",
             "from sqlalchemy.ext.asyncio import AsyncSession",
@@ -37,8 +37,8 @@ class AuthRouterGenerator(BaseTemplateGenerator):
             "from app.schemas.user import UserCreate, UserResponse, UserLogin, Token",
             "from app.services.auth import auth_service",
         ]
-        
-        content = '''router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+        content = '''router = APIRouter(prefix="/auth", tags=["认证"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -46,17 +46,17 @@ async def register(
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    """Register new user
+    """注册新用户
     
     Args:
-        user_data: userregisterdata
-        db: Database session
+        user_data: 用户注册数据
+        db: 数据库会话
         
     Returns:
-        Createuserinformation
+        创建的用户信息
         
     Raises:
-        HTTPException: Username or emailalreadyexists
+        HTTPException: 用户名或邮箱已存在
     """
     try:
         user = await auth_service.register_user(db, user_data)
@@ -73,19 +73,19 @@ async def login(
     user_login: UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
-    """User login
+    """用户登录
     
     Args:
-        user_login: logincredentials
-        db: Database session
+        user_login: 登录凭据
+        db: 数据库会话
         
     Returns:
-        accesstoken
+        访问令牌
         
     Raises:
-        HTTPException: authenticationfailure
+        HTTPException: 认证失败
     """
-    # Prefer to use email, otherwise use username
+    # 优先使用邮箱，否则使用用户名
     login_identifier = user_login.email or user_login.username
     
     token = await auth_service.login_user(db, login_identifier, user_login.password)
@@ -93,23 +93,23 @@ async def login(
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="用户名或密码错误",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     return token
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/routers/v1/auth.py",
-            docstring="authentication routes - Basic JWT Auth",
+            docstring="认证路由 - 基础 JWT 认证",
             imports=imports,
             content=content,
             overwrite=True
         )
-    
+
     def _generate_complete_auth_router(self) -> None:
-        """generate Complete JWT Auth router"""
+        """生成完整 JWT 认证路由"""
         imports = [
             "from fastapi import APIRouter, Depends, HTTPException, status, Request",
             "from sqlalchemy.ext.asyncio import AsyncSession",
@@ -133,30 +133,30 @@ async def login(
             "from app.crud.user import user_crud",
             "from app.crud.token import refresh_token_crud",
         ]
-        
-        content = '''router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+        content = '''router = APIRouter(prefix="/auth", tags=["认证"])
 
 
-# ========== registerandlogin ==========
+# ========== 注册和登录 ==========
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    """Register new user
+    """注册新用户
     
-    After registration, an email verification email will be sent. Users need to verify their email before they can login.
+    注册后会发送邮箱验证邮件，用户需要验证邮箱后才能登录。
     
     Args:
-        user_data: userregisterdata
-        db: Database session
+        user_data: 用户注册数据
+        db: 数据库会话
         
     Returns:
-        Createuserinformation
+        创建的用户信息
         
     Raises:
-        HTTPException: Username or emailalreadyexists
+        HTTPException: 用户名或邮箱已存在
     """
     try:
         user = await auth_service.register_user(db, user_data, send_verification=True)
@@ -174,27 +174,27 @@ async def login(
     request: Request,
     db: AsyncSession = Depends(get_db)
 ):
-    """User login
+    """用户登录
     
-    After successful login, return access token and refresh token.
-    User must have verified their email to login.
+    登录成功后返回访问令牌和刷新令牌。
+    用户必须已验证邮箱才能登录。
     
     Args:
-        user_login: logincredentials
-        request: requestobject
-        db: Database session
+        user_login: 登录凭据
+        request: 请求对象
+        db: 数据库会话
         
     Returns:
-        accesstokenandrefreshtoken
+        访问令牌和刷新令牌
         
     Raises:
-        HTTPException: authentication failed or email not verified
+        HTTPException: 认证失败或邮箱未验证
     """
-    # Get device information
+    # 获取设备信息
     user_agent = request.headers.get("User-Agent", "Unknown")
     ip_address = request.client.host if request.client else None
     
-    # Prefer to use email, otherwise use username
+    # 优先使用邮箱，否则使用用户名
     login_identifier = user_login.email or user_login.username
     
     token = await auth_service.login_user(
@@ -210,7 +210,7 @@ async def login(
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password, or email not verified",
+            detail="用户名或密码错误，或邮箱未验证",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
@@ -222,26 +222,26 @@ async def logout(
     refresh_token_request: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """userlogout
+    """用户登出
     
-    Revoke specified refresh token.
+    撤销指定的刷新令牌。
     
     Args:
-        refresh_token_request: refreshtokenrequest
-        db: Database session
+        refresh_token_request: 刷新令牌请求
+        db: 数据库会话
         
     Returns:
-        successmessage
+        成功消息
     """
     success = await auth_service.logout_user(db, refresh_token_request.refresh_token)
     
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid refresh token"
+            detail="无效的刷新令牌"
         )
     
-    return {"message": "Successfully logged out"}
+    return {"message": "登出成功"}
 
 
 @router.post("/logout-all")
@@ -249,93 +249,93 @@ async def logout_all(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Logout all devices
+    """登出所有设备
     
-    Revoke all refresh tokens for current user.
+    撤销当前用户的所有刷新令牌。
     
     Args:
-        current_user: currentuser
-        db: Database session
+        current_user: 当前用户
+        db: 数据库会话
         
     Returns:
-        Revoke tokenquantity
+        撤销的令牌数量
     """
     count = await auth_service.logout_all_devices(db, current_user.id)
-    return {"message": f"Successfully logged out from {count} devices"}
+    return {"message": f"已从 {count} 台设备登出"}
 
 
-# ========== tokenrefresh ==========
+# ========== 令牌刷新 ==========
 
 @router.post("/refresh", response_model=dict)
 async def refresh_token(
     refresh_token_request: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """refreshaccesstoken
+    """刷新访问令牌
     
-    userefreshtokenGetnewaccesstoken。
+    使用刷新令牌获取新的访问令牌。
     
     Args:
-        refresh_token_request: refreshtokenrequest
-        db: Database session
+        refresh_token_request: 刷新令牌请求
+        db: 数据库会话
         
     Returns:
-        newaccesstoken
+        新的访问令牌
         
     Raises:
-        HTTPException: refresh token invalid or already expired
+        HTTPException: 刷新令牌无效或已过期
     """
     access_token = await auth_service.refresh_access_token(db, refresh_token_request.refresh_token)
     
     if not access_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token",
+            detail="无效或已过期的刷新令牌",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-# ========== EmailValidate ==========
+# ========== 邮箱验证 ==========
 
 @router.post("/verify-email")
 async def verify_email(
     verification: EmailVerificationRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """Verify Email
+    """验证邮箱
     
-    Use verification code to verify user email.
+    使用验证码验证用户邮箱。
     
     Args:
-        verification: EmailValidaterequest
-        db: Database session
+        verification: 邮箱验证请求
+        db: 数据库会话
         
     Returns:
-        successmessage
+        成功消息
         
     Raises:
-        HTTPException: verification code invalid or already expired
+        HTTPException: 验证码无效或已过期
     """
-    # finduser
+    # 查找用户
     user = await user_crud.get_by_email(db, verification.email)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="用户不存在"
         )
     
-    # Verify Email
+    # 验证邮箱
     success = await auth_service.verify_email(db, user.id, verification.code)
     
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired verification code"
+            detail="无效或已过期的验证码"
         )
     
-    return {"message": "Email verified successfully"}
+    return {"message": "邮箱验证成功"}
 
 
 @router.post("/resend-verification")
@@ -343,59 +343,59 @@ async def resend_verification(
     request: ResendVerificationRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """Resend verification email
+    """重新发送验证邮件
     
     Args:
-        request: Resend verification request
-        db: Database session
+        request: 重新发送验证请求
+        db: 数据库会话
         
     Returns:
-        successmessage
+        成功消息
         
     Raises:
-        HTTPException: user does not exist or email already verified
+        HTTPException: 用户不存在或邮箱已验证
     """
-    # finduser
+    # 查找用户
     user = await user_crud.get_by_email(db, request.email)
     if not user:
-        # For security, return success even if user does not exist
-        return {"message": "If the email exists, a verification code has been sent"}
+        # 出于安全考虑，即使用户不存在也返回成功
+        return {"message": "如果该邮箱存在，验证码已发送"}
     
-    # CheckwhetheralreadyValidate
+    # 检查是否已验证
     if user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already verified"
+            detail="邮箱已验证"
         )
     
-    # sendValidateemail
+    # 发送验证邮件
     await auth_service.send_verification_email(db, user)
     
-    return {"message": "Verification email sent"}
+    return {"message": "验证邮件已发送"}
 
 
-# ========== Passwordreset ==========
+# ========== 密码重置 ==========
 
 @router.post("/forgot-password")
 async def forgot_password(
     request: PasswordResetRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """Request password reset
+    """请求密码重置
     
-    Send password reset email to user's email.
+    向用户邮箱发送密码重置邮件。
     
     Args:
-        request: Passwordresetrequest
-        db: Database session
+        request: 密码重置请求
+        db: 数据库会话
         
     Returns:
-        successmessage
+        成功消息
     """
     await auth_service.request_password_reset(db, request.email)
     
-    # For security, always return success message
-    return {"message": "If the email exists, a password reset code has been sent"}
+    # 出于安全考虑，始终返回成功消息
+    return {"message": "如果该邮箱存在，密码重置验证码已发送"}
 
 
 @router.post("/reset-password")
@@ -403,19 +403,19 @@ async def reset_password(
     reset_data: PasswordResetConfirm,
     db: AsyncSession = Depends(get_db)
 ):
-    """Reset password
+    """重置密码
     
-    Use verification code to reset password.
+    使用验证码重置密码。
     
     Args:
-        reset_data: Passwordresetconfirmdata
-        db: Database session
+        reset_data: 密码重置确认数据
+        db: 数据库会话
         
     Returns:
-        successmessage
+        成功消息
         
     Raises:
-        HTTPException: verification code invalid or already expired
+        HTTPException: 验证码无效或已过期
     """
     success = await auth_service.reset_password(
         db,
@@ -427,10 +427,10 @@ async def reset_password(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset code"
+            detail="无效或已过期的重置码"
         )
     
-    return {"message": "Password reset successfully"}
+    return {"message": "密码重置成功"}
 
 
 @router.post("/change-password")
@@ -439,63 +439,63 @@ async def change_password(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Change password
+    """修改密码
     
-    User changes their own password (requires old password).
+    用户修改自己的密码（需要旧密码）。
     
     Args:
-        password_data: Passwordmodifydata
-        current_user: currentuser
-        db: Database session
+        password_data: 密码修改数据
+        current_user: 当前用户
+        db: 数据库会话
         
     Returns:
-        successmessage
+        成功消息
         
     Raises:
-        HTTPException: oldPassworderror
+        HTTPException: 旧密码错误
     """
-    # ValidateoldPassword
+    # 验证旧密码
     user = await user_crud.authenticate(db, current_user.username, password_data.old_password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect old password"
+            detail="旧密码错误"
         )
     
-    # Change password
+    # 修改密码
     await user_crud.change_password(db, current_user.id, password_data.new_password)
     
-    # Revoke all refresh tokens (force re-login)
+    # 撤销所有刷新令牌（强制重新登录）
     await refresh_token_crud.revoke_user_tokens(db, current_user.id)
     
-    return {"message": "Password changed successfully. Please login again."}
+    return {"message": "密码修改成功，请重新登录"}
 
 
-# ========== Device management ==========
+# ========== 设备管理 ==========
 
 @router.get("/devices", response_model=list[RefreshTokenResponse])
 async def list_devices(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get all login devices
+    """获取所有登录设备
     
-    List all active login devices for current user.
+    列出当前用户的所有活跃登录设备。
     
     Args:
-        current_user: currentuser
-        db: Database session
+        current_user: 当前用户
+        db: 数据库会话
         
     Returns:
-        Device list
+        设备列表
     """
     tokens = await refresh_token_crud.get_user_tokens(db, current_user.id, include_revoked=False)
     return tokens
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/routers/v1/auth.py",
-            docstring="authentication routes - Complete JWT Auth",
+            docstring="认证路由 - 完整 JWT 认证",
             imports=imports,
             content=content,
             overwrite=True

@@ -1,4 +1,4 @@
-"""Authentication service generator"""
+"""认证服务生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,26 +9,26 @@ from ..base import BaseTemplateGenerator
     priority=70,
     requires=["UserCRUDGenerator", "SecurityGenerator"],
     enabled_when=lambda c: c.has_auth(),
-    description="Generate authentication service (app/services/auth.py)"
+    description="生成认证服务 (app/services/auth.py)"
 )
 class AuthServiceGenerator(BaseTemplateGenerator):
-    """Authentication service file generator"""
-    
+    """认证服务文件生成器"""
+
     def generate(self) -> None:
-        """generate authentication service file"""
-        # Only generate if authentication is enabled
+        """生成认证服务文件"""
+        # 仅在启用身份验证时生成
         if not self.config_reader.has_auth():
             return
-        
+
         auth_type = self.config_reader.get_auth_type()
-        
+
         if auth_type == "basic":
             self._generate_basic_auth_service()
         else:  # complete
             self._generate_complete_auth_service()
-    
+
     def _generate_basic_auth_service(self) -> None:
-        """generate service for Basic JWT Auth"""
+        """生成基础 JWT 认证服务"""
         imports = [
             "from datetime import datetime, timedelta",
             "from typing import Optional",
@@ -40,20 +40,20 @@ class AuthServiceGenerator(BaseTemplateGenerator):
             "from app.models.user import User",
             "from app.schemas.user import UserCreate, Token",
         ]
-        
+
         content = '''class AuthService:
-    """Authentication service class - Basic JWT Auth"""
+    """认证服务类 - 基础 JWT 认证"""
     
     @staticmethod
     def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-        """Createaccesstoken
+        """创建访问令牌
         
         Args:
-            data: Data to encode
-            expires_delta: Expiration time delta
+            data: 要编码的数据
+            expires_delta: 过期时间增量
             
         Returns:
-            JWT token string
+            JWT 令牌字符串
         """
         to_encode = data.copy()
         
@@ -72,52 +72,52 @@ class AuthServiceGenerator(BaseTemplateGenerator):
     
     @staticmethod
     async def register_user(db: AsyncSession, user_data: UserCreate) -> User:
-        """Register new user
+        """注册新用户
         
         Args:
-            db: Database session
-            user_data: userCreatedata
+            db: 数据库会话
+            user_data: 用户创建数据
             
         Returns:
-            Createuserobject
+            创建的用户对象
             
         Raises:
-            ValueError: Username or emailalreadyexists
+            ValueError: 用户名或邮箱已存在
         """
-        # CheckUsernamewhetheralreadyexists
+        # 检查用户名是否已存在
         if await user_crud.get_by_username(db, user_data.username):
-            raise ValueError("Username already registered")
+            raise ValueError("用户名已被注册")
         
-        # CheckEmailwhetheralreadyexists
+        # 检查邮箱是否已存在
         if await user_crud.get_by_email(db, user_data.email):
-            raise ValueError("Email already registered")
+            raise ValueError("邮箱已被注册")
         
-        # Createuser
+        # 创建用户
         user = await user_crud.create(db, user_data)
         return user
     
     @staticmethod
     async def login_user(db: AsyncSession, username: str, password: str) -> Optional[Token]:
-        """User login
+        """用户登录
         
         Args:
-            db: Database session
-            username: Username or email
-            password: Password
+            db: 数据库会话
+            username: 用户名或邮箱
+            password: 密码
             
         Returns:
-            Token object, returns None if authentication fails
+            令牌对象，认证失败返回 None
         """
-        # Authenticate user
+        # 认证用户
         user = await user_crud.authenticate(db, username, password)
         if not user:
             return None
         
-        # Checkuserwhetheractivate
+        # 检查用户是否激活
         if not user.is_active:
             return None
         
-        # Createaccesstoken
+        # 创建访问令牌
         access_token = AuthService.create_access_token(
             data={"sub": user.username, "user_id": user.id}
         )
@@ -125,20 +125,20 @@ class AuthServiceGenerator(BaseTemplateGenerator):
         return Token(access_token=access_token, token_type="bearer")
 
 
-# Global service instance
+# 全局服务实例
 auth_service = AuthService()
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/services/auth.py",
-            docstring="Authentication service - Basic JWT Auth",
+            docstring="认证服务 - 基础 JWT 认证",
             imports=imports,
             content=content,
             overwrite=True
         )
-    
+
     def _generate_complete_auth_service(self) -> None:
-        """generate service for Complete JWT Auth"""
+        """生成完整 JWT 认证服务"""
         imports = [
             "from datetime import datetime, timedelta",
             "from typing import Optional",
@@ -152,34 +152,34 @@ auth_service = AuthService()
             "from app.schemas.user import UserCreate, Token",
             "from app.utils.email import email_service",
         ]
-        
+
         content = '''class AuthService:
-    """Authentication service class - Complete JWT Auth"""
+    """认证服务类 - 完整 JWT 认证"""
     
     @staticmethod
     def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-        """Createaccesstoken
+        """创建访问令牌
         
         Args:
-            data: Data to encode
-            expires_delta: Expiration time delta (deprecated, use value from configuration)
+            data: 要编码的数据
+            expires_delta: 过期时间增量（已弃用，使用配置中的值）
             
         Returns:
-            JWT token string
+            JWT 令牌字符串
         """
         token, _ = security_manager.create_access_token(data)
         return token
     
     @staticmethod
     def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-        """Createrefreshtoken
+        """创建刷新令牌
         
         Args:
-            data: Data to encode
-            expires_delta: Expiration time delta (deprecated, use value from configuration)
+            data: 要编码的数据
+            expires_delta: 过期时间增量（已弃用，使用配置中的值）
             
         Returns:
-            JWT refresh token string
+            JWT 刷新令牌字符串
         """
         token, _ = security_manager.create_refresh_token(data)
         return token
@@ -190,31 +190,31 @@ auth_service = AuthService()
         user_data: UserCreate,
         send_verification: bool = True
     ) -> User:
-        """Register new user
+        """注册新用户
         
         Args:
-            db: Database session
-            user_data: userCreatedata
-            send_verification: whethersendValidateemail
+            db: 数据库会话
+            user_data: 用户创建数据
+            send_verification: 是否发送验证邮件
             
         Returns:
-            Createuserobject
+            创建的用户对象
             
         Raises:
-            ValueError: Username or emailalreadyexists
+            ValueError: 用户名或邮箱已存在
         """
-        # CheckUsernamewhetheralreadyexists
+        # 检查用户名是否已存在
         if await user_crud.get_by_username(db, user_data.username):
-            raise ValueError("Username already registered")
+            raise ValueError("用户名已被注册")
         
-        # CheckEmailwhetheralreadyexists
+        # 检查邮箱是否已存在
         if await user_crud.get_by_email(db, user_data.email):
-            raise ValueError("Email already registered")
+            raise ValueError("邮箱已被注册")
         
-        # Create user (unverified status)
+        # 创建用户（未验证状态）
         user = await user_crud.create(db, user_data)
         
-        # sendValidateemail
+        # 发送验证邮件
         if send_verification:
             await AuthService.send_verification_email(db, user)
         
@@ -222,13 +222,13 @@ auth_service = AuthService()
     
     @staticmethod
     async def send_verification_email(db: AsyncSession, user: User) -> None:
-        """sendEmailValidateemail
+        """发送邮箱验证邮件
         
         Args:
-            db: Database session
-            user: userobject
+            db: 数据库会话
+            user: 用户对象
         """
-        # Create verification code
+        # 创建验证码
         code = await verification_code_crud.create(
             db,
             user_id=user.id,
@@ -236,9 +236,9 @@ auth_service = AuthService()
             expiration_minutes=60
         )
         
-        # sendemail
+        # 发送邮件
         await email_service.send_email(
-            subject="Email Verification",
+            subject="邮箱验证",
             recipient=user.email,
             template="verification",
             username=user.username,
@@ -247,17 +247,17 @@ auth_service = AuthService()
     
     @staticmethod
     async def verify_email(db: AsyncSession, user_id: int, code: str) -> bool:
-        """Verify Email
+        """验证邮箱
         
         Args:
-            db: Database session
-            user_id: user ID
-            code: Verification code
+            db: 数据库会话
+            user_id: 用户 ID
+            code: 验证码
             
         Returns:
-            Validatewhethersuccess
+            验证是否成功
         """
-        # Verify verification code
+        # 验证验证码
         verified_code = await verification_code_crud.verify(
             db,
             user_id=user_id,
@@ -268,13 +268,13 @@ auth_service = AuthService()
         if not verified_code:
             return False
         
-        # Mark email as verified
+        # 标记邮箱已验证
         user = await user_crud.verify_email(db, user_id)
         
         if user:
-            # Send welcome email
+            # 发送欢迎邮件
             await email_service.send_email(
-                subject="Welcome!",
+                subject="欢迎！",
                 recipient=user.email,
                 template="welcome",
                 username=user.username
@@ -293,48 +293,48 @@ auth_service = AuthService()
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None
     ) -> Optional[Token]:
-        """User login
+        """用户登录
         
         Args:
-            db: Database session
-            username: Username or email
-            password: Password
-            device_name: Device name
-            device_type: Device type
-            ip_address: IP address
-            user_agent: User Agent
+            db: 数据库会话
+            username: 用户名或邮箱
+            password: 密码
+            device_name: 设备名称
+            device_type: 设备类型
+            ip_address: IP 地址
+            user_agent: 用户代理
             
         Returns:
-            Token object, returns None if authentication fails
+            令牌对象，认证失败返回 None
         """
-        # Authenticate user
+        # 认证用户
         user = await user_crud.authenticate(db, username, password)
         if not user:
             return None
         
-        # Checkuserwhetheractivate
+        # 检查用户是否激活
         if not user.is_active:
             return None
         
-        # CheckEmailwhetheralreadyValidate
+        # 检查邮箱是否已验证
         if not user.is_verified:
             return None
         
-        # Update last login time
+        # 更新最后登录时间
         user.last_login_at = datetime.utcnow()
         await db.commit()
         
-        # Createaccesstoken
+        # 创建访问令牌
         access_token = AuthService.create_access_token(
             data={"sub": user.username, "user_id": user.id}
         )
         
-        # Createrefreshtoken
+        # 创建刷新令牌
         refresh_token = AuthService.create_refresh_token(
             data={"sub": user.username, "user_id": user.id}
         )
         
-        # Save refresh token to database
+        # 保存刷新令牌到数据库
         expires_at = datetime.utcnow() + timedelta(seconds=settings.jwt.JWT_REFRESH_TOKEN_EXPIRATION)
         await refresh_token_crud.create(
             db,
@@ -355,30 +355,30 @@ auth_service = AuthService()
     
     @staticmethod
     async def refresh_access_token(db: AsyncSession, refresh_token: str) -> Optional[str]:
-        """userefreshtokenGetnewaccesstoken
+        """使用刷新令牌获取新的访问令牌
         
         Args:
-            db: Database session
-            refresh_token: refreshtoken
+            db: 数据库会话
+            refresh_token: 刷新令牌
             
         Returns:
-            New access token, return None if refresh fails
+            新的访问令牌，刷新失败返回 None
         """
-        # Validate refresh token
+        # 验证刷新令牌
         db_token = await refresh_token_crud.get_by_token(db, refresh_token)
         
         if not db_token or not db_token.is_valid():
             return None
         
-        # Update last used time
+        # 更新最后使用时间
         await refresh_token_crud.update_last_used(db, db_token.id)
         
-        # Getuser
+        # 获取用户
         user = await user_crud.get_by_id(db, db_token.user_id)
         if not user or not user.is_active:
             return None
         
-        # generatenewaccesstoken
+        # 生成新的访问令牌
         access_token = AuthService.create_access_token(
             data={"sub": user.username, "user_id": user.id}
         )
@@ -387,22 +387,22 @@ auth_service = AuthService()
     
     @staticmethod
     async def request_password_reset(db: AsyncSession, email: str) -> bool:
-        """Request password reset
+        """请求密码重置
         
         Args:
-            db: Database session
-            email: User email
+            db: 数据库会话
+            email: 用户邮箱
             
         Returns:
-            whethersuccesssendresetemail
+            是否成功发送重置邮件
         """
-        # finduser
+        # 查找用户
         user = await user_crud.get_by_email(db, email)
         if not user:
-            # For security, return True even if user does not exist
+            # 出于安全考虑，即使用户不存在也返回 True
             return True
         
-        # Create reset code
+        # 创建重置码
         code = await verification_code_crud.create(
             db,
             user_id=user.id,
@@ -410,9 +410,9 @@ auth_service = AuthService()
             expiration_minutes=60
         )
         
-        # sendresetemail
+        # 发送重置邮件
         await email_service.send_email(
-            subject="Password Reset",
+            subject="密码重置",
             recipient=user.email,
             template="password_reset",
             username=user.username,
@@ -423,23 +423,23 @@ auth_service = AuthService()
     
     @staticmethod
     async def reset_password(db: AsyncSession, email: str, code: str, new_password: str) -> bool:
-        """Reset password
+        """重置密码
         
         Args:
-            db: Database session
-            email: User email
-            code: Verification code
-            new_password: New password
+            db: 数据库会话
+            email: 用户邮箱
+            code: 验证码
+            new_password: 新密码
             
         Returns:
-            whethersuccessReset password
+            是否成功重置密码
         """
-        # finduser
+        # 查找用户
         user = await user_crud.get_by_email(db, email)
         if not user:
             return False
         
-        # Verify verification code
+        # 验证验证码
         verified_code = await verification_code_crud.verify(
             db,
             user_id=user.id,
@@ -450,48 +450,48 @@ auth_service = AuthService()
         if not verified_code:
             return False
         
-        # Change password
+        # 修改密码
         await user_crud.change_password(db, user.id, new_password)
         
-        # Revoke all refresh tokens (force re-login)
+        # 撤销所有刷新令牌（强制重新登录）
         await refresh_token_crud.revoke_user_tokens(db, user.id)
         
         return True
     
     @staticmethod
     async def logout_user(db: AsyncSession, refresh_token: str) -> bool:
-        """User logout (revoke refresh token)
+        """用户登出（撤销刷新令牌）
         
         Args:
-            db: Database session
-            refresh_token: refreshtoken
+            db: 数据库会话
+            refresh_token: 刷新令牌
             
         Returns:
-            whethersuccesslogout
+            是否成功登出
         """
         return await refresh_token_crud.revoke(db, refresh_token)
     
     @staticmethod
     async def logout_all_devices(db: AsyncSession, user_id: int) -> int:
-        """Logout all devices
+        """登出所有设备
         
         Args:
-            db: Database session
-            user_id: user ID
+            db: 数据库会话
+            user_id: 用户 ID
             
         Returns:
-            Revoke tokenquantity
+            撤销的令牌数量
         """
         return await refresh_token_crud.revoke_user_tokens(db, user_id)
 
 
-# Global service instance
+# 全局服务实例
 auth_service = AuthService()
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/services/auth.py",
-            docstring="Authentication service - Complete JWT Auth",
+            docstring="认证服务 - 完整 JWT 认证",
             imports=imports,
             content=content,
             overwrite=True

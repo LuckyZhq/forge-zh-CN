@@ -1,4 +1,4 @@
-"""Test user endpoints generator"""
+"""用户端点测试生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,26 +9,26 @@ from ..base import BaseTemplateGenerator
     priority=113,
     requires=["UserRouterGenerator"],
     enabled_when=lambda c: c.has_testing() and c.has_auth(),
-    description="Generate user tests (tests/api/test_users.py)"
+    description="生成用户测试文件 (tests/api/test_users.py)"
 )
 class TestUsersGenerator(BaseTemplateGenerator):
-    """generate test_users.py file"""
-    
+    """生成 test_users.py 文件"""
+
     def generate(self) -> None:
-        """generate test_users.py"""
+        """生成 test_users.py"""
         if not self.config_reader.has_testing() or not self.config_reader.has_auth():
             return
-        
+
         content = self._build_user_tests()
         self.file_ops.create_file(
             file_path="tests/api/test_users.py",
             content=content,
             overwrite=True
         )
-    
+
     def _build_user_tests(self) -> str:
-        """Build user tests"""
-        return '''"""Test user endpoints"""
+        """构建用户测试"""
+        return '''"""用户端点测试"""
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 @pytest.mark.asyncio
 async def test_get_current_user(client: AsyncClient, auth_headers):
-    """Test get current user"""
+    """测试获取当前用户"""
     response = await client.get(
         "/api/v1/users/me",
         headers=auth_headers
@@ -50,7 +50,7 @@ async def test_get_current_user(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_update_current_user(client: AsyncClient, auth_headers):
-    """Test update current user"""
+    """测试更新当前用户"""
     response = await client.put(
         "/api/v1/users/me",
         headers=auth_headers,
@@ -63,7 +63,7 @@ async def test_update_current_user(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_get_user_without_auth(client: AsyncClient):
-    """Test get user without authentication"""
+    """测试未认证情况下获取用户"""
     response = await client.get("/api/v1/users/me")
     assert response.status_code == 401
 '''

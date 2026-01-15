@@ -1,4 +1,4 @@
-"""user routesgenerategenerator"""
+"""用户路由生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,21 +9,21 @@ from ..base import BaseTemplateGenerator
     priority=81,
     requires=["UserCRUDGenerator", "CoreDepsGenerator"],
     enabled_when=lambda c: c.has_auth(),
-    description="Generate user router (app/routers/v1/users.py)"
+    description="生成用户路由 (app/routers/v1/users.py)"
 )
 class UserRouterGenerator(BaseTemplateGenerator):
-    """user routesFile generator"""
-    
+    """用户路由文件生成器"""
+
     def generate(self) -> None:
-        """generateuser routesfile"""
-        # Only generate if authentication is enabled
+        """生成用户路由文件"""
+        # 仅在启用身份验证时生成
         if not self.config_reader.has_auth():
             return
-        
+
         self._generate_user_router()
-    
+
     def _generate_user_router(self) -> None:
-        """generateuser routes"""
+        """生成用户路由"""
         imports = [
             "from fastapi import APIRouter, Depends, HTTPException, status",
             "from sqlalchemy.ext.asyncio import AsyncSession",
@@ -35,21 +35,21 @@ class UserRouterGenerator(BaseTemplateGenerator):
             "from app.schemas.user import UserResponse, UserUpdate",
             "from app.crud.user import user_crud",
         ]
-        
-        content = '''router = APIRouter(prefix="/users", tags=["Users"])
+
+        content = '''router = APIRouter(prefix="/users", tags=["用户"])
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
     current_user: User = Depends(get_current_user)
 ):
-    """Getcurrentuserinformation
+    """获取当前用户信息
     
     Args:
-        current_user: currentloginuser
+        current_user: 当前登录用户
         
     Returns:
-        userinformation
+        用户信息
     """
     return current_user
 
@@ -60,35 +60,35 @@ async def update_current_user(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """updatecurrentuserinformation
+    """更新当前用户信息
     
     Args:
-        user_update: user update data
-        current_user: currentloginuser
-        db: Database session
+        user_update: 用户更新数据
+        current_user: 当前登录用户
+        db: 数据库会话
         
     Returns:
-        updateafteruserinformation
+        更新后的用户信息
         
     Raises:
-        HTTPException: updatefailure
+        HTTPException: 更新失败
     """
-    # ifupdateUsername，Checkwhetheralreadyexists
+    # 如果更新用户名，检查是否已存在
     if user_update.username and user_update.username != current_user.username:
         existing_user = await user_crud.get_by_username(db, user_update.username)
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken"
+                detail="用户名已被占用"
             )
     
-    # ifupdateEmail，Checkwhetheralreadyexists
+    # 如果更新邮箱，检查是否已存在
     if user_update.email and user_update.email != current_user.email:
         existing_user = await user_crud.get_by_email(db, user_update.email)
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
+                detail="邮箱已被注册"
             )
     
     updated_user = await user_crud.update(db, current_user.id, user_update)
@@ -96,7 +96,7 @@ async def update_current_user(
     if not updated_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="用户不存在"
         )
     
     return updated_user
@@ -107,25 +107,25 @@ async def delete_current_user(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Delete current user account
+    """删除当前用户账号
     
     Args:
-        current_user: currentloginuser
-        db: Database session
+        current_user: 当前登录用户
+        db: 数据库会话
         
     Raises:
-        HTTPException: Deletefailure
+        HTTPException: 删除失败
     """
     success = await user_crud.delete(db, current_user.id)
     
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="用户不存在"
         )
 
 
-# ========== Admin routes ==========
+# ========== 管理员路由 ==========
 
 @router.get("/", response_model=List[UserResponse])
 async def list_users(
@@ -134,16 +134,16 @@ async def list_users(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get user list (admin only)
+    """获取用户列表（仅管理员）
     
     Args:
-        skip: skip count
-        limit: return max count
-        current_user: current logged in admin user
-        db: Database session
+        skip: 跳过数量
+        limit: 返回最大数量
+        current_user: 当前登录的管理员用户
+        db: 数据库会话
         
     Returns:
-        userlist
+        用户列表
     """
     users = await user_crud.get_all(db, skip=skip, limit=limit)
     return users
@@ -155,25 +155,25 @@ async def get_user(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get specified user information (admin only)
+    """获取指定用户信息（仅管理员）
     
     Args:
-        user_id: user ID
-        current_user: current logged in admin user
-        db: Database session
+        user_id: 用户 ID
+        current_user: 当前登录的管理员用户
+        db: 数据库会话
         
     Returns:
-        userinformation
+        用户信息
         
     Raises:
-        HTTPException: user does not exist
+        HTTPException: 用户不存在
     """
     user = await user_crud.get_by_id(db, user_id)
     
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="用户不存在"
         )
     
     return user
@@ -186,26 +186,26 @@ async def update_user(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update specified user information (admin only)
+    """更新指定用户信息（仅管理员）
     
     Args:
-        user_id: user ID
-        user_update: user update data
-        current_user: current logged in admin user
-        db: Database session
+        user_id: 用户 ID
+        user_update: 用户更新数据
+        current_user: 当前登录的管理员用户
+        db: 数据库会话
         
     Returns:
-        updateafteruserinformation
+        更新后的用户信息
         
     Raises:
-        HTTPException: user does not exist or update failed
+        HTTPException: 用户不存在或更新失败
     """
     updated_user = await user_crud.update(db, user_id, user_update)
     
     if not updated_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="用户不存在"
         )
     
     return updated_user
@@ -217,21 +217,21 @@ async def delete_user(
     current_user: User = Depends(get_current_superuser),
     db: AsyncSession = Depends(get_db)
 ):
-    """Delete specified user (admin only)
+    """删除指定用户（仅管理员）
     
     Args:
-        user_id: user ID
-        current_user: current logged in admin user
-        db: Database session
+        user_id: 用户 ID
+        current_user: 当前登录的管理员用户
+        db: 数据库会话
         
     Raises:
-        HTTPException: user does not exist or delete failed
+        HTTPException: 用户不存在或删除失败
     """
-    # Prevent admin from deleting themselves
+    # 防止管理员删除自己
     if user_id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete yourself"
+            detail="不能删除自己"
         )
     
     success = await user_crud.delete(db, user_id)
@@ -239,13 +239,13 @@ async def delete_user(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="用户不存在"
         )
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/routers/v1/users.py",
-            docstring="usermanagementrouter",
+            docstring="用户管理路由",
             imports=imports,
             content=content,
             overwrite=True
