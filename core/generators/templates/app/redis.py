@@ -1,4 +1,4 @@
-"""Redis app generator"""
+"""Redis 应用生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,14 +9,14 @@ from ..base import BaseTemplateGenerator
     priority=48,
     enabled_when=lambda c: c.has_redis(),
     requires=["RedisConfigGenerator"],
-    description="Generate Redis connection manager (app/core/redis.py)"
+    description="生成 Redis 连接管理器 (app/core/redis.py)"
 )
 class RedisAppGenerator(BaseTemplateGenerator):
-    """Redis connection manager generator"""
-    
+    """Redis 连接管理器生成器"""
+
     def generate(self) -> None:
-        """Generate Redis connection manager file"""
-        
+        """生成 Redis 连接管理器文件"""
+
         imports = [
             "from redis.asyncio import Redis as AsyncRedis",
             "from redis.asyncio import from_url as async_from_url",
@@ -25,9 +25,9 @@ class RedisAppGenerator(BaseTemplateGenerator):
             "from app.core.config.settings import settings",
             "from app.core.logger import logger_manager",
         ]
-        
+
         content = '''class RedisManager:
-    """Redis connection manager - supports async and sync clients"""
+    """Redis 连接管理器 - 支持异步和同步客户端"""
     
     def __init__(self):
         self.logger = logger_manager.get_logger(__name__)
@@ -36,9 +36,9 @@ class RedisAppGenerator(BaseTemplateGenerator):
         self.config = settings.redis
     
     async def initialize_async(self) -> None:
-        """Initialize async Redis client - for FastAPI"""
+        """初始化异步 Redis 客户端 - 用于 FastAPI"""
         if self.async_client:
-            self.logger.debug("Redis async client already initialized.")
+            self.logger.debug("Redis 异步客户端已初始化。")
             return
         
         try:
@@ -50,15 +50,15 @@ class RedisAppGenerator(BaseTemplateGenerator):
                 retry_on_timeout=True,
                 health_check_interval=30,
             )
-            self.logger.info("✅ Redis async client initialized.")
+            self.logger.info("✅ Redis 异步客户端初始化成功。")
         except Exception:
-            self.logger.exception("❌ Failed to initialize Redis async client.")
+            self.logger.exception("❌ Redis 异步客户端初始化失败。")
             raise
     
     def initialize_sync(self) -> None:
-        """Initialize sync Redis client - for Celery"""
+        """初始化同步 Redis 客户端 - 用于 Celery"""
         if self.sync_client:
-            self.logger.debug("Redis sync client already initialized.")
+            self.logger.debug("Redis 同步客户端已初始化。")
             return
         
         try:
@@ -70,13 +70,13 @@ class RedisAppGenerator(BaseTemplateGenerator):
                 retry_on_timeout=True,
                 health_check_interval=30,
             )
-            self.logger.info("✅ Redis sync client initialized.")
+            self.logger.info("✅ Redis 同步客户端初始化成功。")
         except Exception:
-            self.logger.exception("❌ Failed to initialize Redis sync client.")
+            self.logger.exception("❌ Redis 同步客户端初始化失败。")
             raise
     
     # -------------------------------
-    # ✅ Async methods - for FastAPI
+    # ✅ 异步方法 - 用于 FastAPI
     # -------------------------------
     
     async def get_async_client(self) -> AsyncRedis:
@@ -106,14 +106,14 @@ class RedisAppGenerator(BaseTemplateGenerator):
         try:
             client = await self.get_async_client()
             await client.ping()
-            self.logger.info("✅ Redis async client connection test successful.")
+            self.logger.info("✅ Redis 异步客户端连接测试成功。")
             return True
         except Exception:
-            self.logger.exception("❌ Redis async client connection test failed.")
+            self.logger.exception("❌ Redis 异步客户端连接测试失败。")
             raise
     
     # -------------------------------
-    # ✅ Sync methods - for Celery / scripts
+    # ✅ 同步方法 - 用于 Celery / 脚本
     # -------------------------------
     
     def get_sync_client(self) -> SyncRedis:
@@ -140,33 +140,33 @@ class RedisAppGenerator(BaseTemplateGenerator):
         try:
             client = self.get_sync_client()
             client.ping()
-            self.logger.info("✅ Redis sync client connection test successful.")
+            self.logger.info("✅ Redis 同步客户端连接测试成功。")
             return True
         except Exception:
-            self.logger.exception("❌ Redis sync client connection test failed.")
+            self.logger.exception("❌ Redis 同步客户端连接测试失败。")
             raise
     
     # -------------------------------
-    # ✅ Resource cleanup
+    # ✅ 资源清理
     # -------------------------------
     
     async def close(self) -> None:
-        """Close async and sync clients"""
+        """关闭异步和同步客户端"""
         if self.async_client:
             try:
                 await self.async_client.close()
                 self.async_client = None
-                self.logger.info("✅ Redis async client closed.")
+                self.logger.info("✅ Redis 异步客户端已关闭。")
             except Exception:
-                self.logger.exception("❌ Failed to close Redis async client.")
+                self.logger.exception("❌ 关闭 Redis 异步客户端失败。")
         
         if self.sync_client:
             try:
                 self.sync_client.close()
                 self.sync_client = None
-                self.logger.info("✅ Redis sync client closed.")
+                self.logger.info("✅ Redis 同步客户端已关闭。")
             except Exception:
-                self.logger.exception("❌ Failed to close Redis sync client.")
+                self.logger.exception("❌ 关闭 Redis 同步客户端失败。")
     
     async def __aenter__(self) -> "RedisManager":
         await self.initialize_async()
@@ -176,13 +176,13 @@ class RedisAppGenerator(BaseTemplateGenerator):
         await self.close()
 
 
-# Singleton instance
+# 单例实例
 redis_manager = RedisManager()
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/core/redis.py",
-            docstring="Redis connection manager - supports async and sync clients",
+            docstring="Redis 连接管理器 - 支持异步和同步客户端",
             imports=imports,
             content=content,
             overwrite=True

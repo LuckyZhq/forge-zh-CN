@@ -1,4 +1,5 @@
 """Main.py generator"""
+
 from core.decorators import Generator
 from pathlib import Path
 from .base import BaseTemplateGenerator
@@ -7,21 +8,29 @@ from .base import BaseTemplateGenerator
 @Generator(
     category="app",
     priority=90,
-    requires=["ConfigSettingsGenerator", "LoggerManagerGenerator", "DatabaseConnectionGenerator"],
-    description="Generate main application entry point (app/main.py)"
+    requires=[
+        "ConfigSettingsGenerator",
+        "LoggerManagerGenerator",
+        "DatabaseConnectionGenerator",
+    ],
+    description="Generate main application entry point (app/main.py)",
 )
 class MainGenerator(BaseTemplateGenerator):
     """Main.py File generator"""
-    
+
     def generate(self) -> None:
         """generate main.py file"""
-        auth_type = self.config_reader.get_auth_type() if self.config_reader.has_auth() else None
-        
+        auth_type = (
+            self.config_reader.get_auth_type()
+            if self.config_reader.has_auth()
+            else None
+        )
+
         if auth_type:
             self._generate_main_with_auth()
         else:
             self._generate_basic_main()
-    
+
     def _generate_basic_main(self) -> None:
         """generate base main.py (no authentication)"""
         imports = [
@@ -37,77 +46,77 @@ class MainGenerator(BaseTemplateGenerator):
             "from app.core.logger import logger_manager",
             "from app.core.database import db_manager",
         ]
-        
+
         # Add Redis import if enabled
         if self.config_reader.has_redis():
             imports.append("from app.core.redis import redis_manager")
-        
-        # Build lifespan function
-        lifespan_content = '''# Create LoggerManager instance
+
+        # 构建 lifespan 函数
+        lifespan_content = '''# 创建 LoggerManager 实例
 logger_manager.setup()
 
-# Create Logger instance
+# 创建 Logger 实例
 logger = logger_manager.get_logger(__name__)
 
 
-# Create lifespan
+# 创建 lifespan
 async def lifespan(_app: FastAPI):
-    """Application lifespan management"""
-    logger.info("🚩 Starting the application...")
-    logger.info(f"🚧 You are working in {os.getenv('ENV', 'development')} environment")
-    
+    """应用生命周期管理"""
+    logger.info("🚩 应用正在启动...")
+    logger.info(f"🚧 当前运行环境：{os.getenv('ENV', 'development')}")
+
     try:
-        # Initialize database connection
+        # 初始化数据库连接
         await db_manager.initialize()
-        logger.info("🎉 Database connections initialized successfully")
+        logger.info("🎉 数据库连接初始化成功")
         await db_manager.test_connections()
-        logger.info("🎉 Database connections test successfully")
+        logger.info("🎉 数据库连接测试成功")
     except Exception as e:
-        logger.error(f"❌ Database connection failed: {e}")
-        logger.warning("⚠️ Application will start without database connections")'''
-        
-        # Add Redis initialization if enabled
+        logger.error(f"❌ 数据库连接失败：{e}")
+        logger.warning("⚠️ 应用将在未建立数据库连接的情况下启动")'''
+
+        # 如果启用了 Redis，则添加 Redis 初始化逻辑
         if self.config_reader.has_redis():
-            lifespan_content += '''
-    
+            lifespan_content += """
+
     try:
-        # Initialize Redis connection
+        # 初始化 Redis 连接
         await redis_manager.initialize_async()
-        logger.info("🎉 Redis connections initialized successfully")
+        logger.info("🎉 Redis 连接初始化成功")
         await redis_manager.async_test_connection()
-        logger.info("🎉 Redis connections test successfully")
+        logger.info("🎉 Redis 连接测试成功")
     except Exception as e:
-        logger.error(f"❌ Redis connection failed: {e}")
-        logger.warning("⚠️ Application will start without Redis connections")'''
-        
-        lifespan_content += '''
-    
+        logger.error(f"❌ Redis 连接失败：{e}")
+        logger.warning("⚠️ 应用将在未建立 Redis 连接的情况下启动")"""
+
+        lifespan_content += """
+
     yield
-    
-    # Close database connection
+
+    # 关闭数据库连接
     try:
         await db_manager.close()
-        logger.info("🎉 Database connections closed successfully")
+        logger.info("🎉 数据库连接已成功关闭")
     except Exception as e:
-        logger.error(f"❌ Database connection closed failed: {e}")
-        logger.warning("⚠️ Database connection closed failed")'''
-        
-        # Add Redis cleanup if enabled
+        logger.error(f"❌ 数据库连接关闭失败：{e}")
+        logger.warning("⚠️ 数据库连接关闭失败")"""
+
+        # 如果启用了 Redis，则添加 Redis 清理逻辑
         if self.config_reader.has_redis():
-            lifespan_content += '''
-    
-    # Close Redis connections
+            lifespan_content += """
+
+    # 关闭 Redis 连接
     try:
         await redis_manager.close()
-        logger.info("🎉 Redis connections closed successfully")
+        logger.info("🎉 Redis 连接已成功关闭")
     except Exception as e:
-        logger.error(f"❌ Redis connection closed failed: {e}")
-        logger.warning("⚠️ Redis connection closed failed")'''
-        
-        # Build main app content
+        logger.error(f"❌ Redis 连接关闭失败：{e}")
+        logger.warning("⚠️ Redis 连接关闭失败")"""
+
+        # 构建主应用内容
         app_content = '''
 
-# Create FastAPI instance
+# 创建 FastAPI 实例
 app = FastAPI(
     lifespan=lifespan,
     title=settings.app.APP_NAME,
@@ -116,18 +125,18 @@ app = FastAPI(
 )
 
 
-# Global exception handlers
+# 全局异常处理器
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_request: Request, exc: HTTPException):
-    """HTTP exception handler"""
+    """HTTP 异常处理器"""
     logger.error(f"HTTPException: {exc}")
     error_detail = exc.detail
-    
+
     if isinstance(error_detail, dict):
         error_message = error_detail.get("error", str(error_detail))
     else:
         error_message = str(error_detail)
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content={"status": exc.status_code, "error": error_message},
@@ -136,19 +145,19 @@ async def http_exception_handler(_request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(_request: Request, exc: Exception):
-    """General exception handler"""
+    """通用异常处理器"""
     logger.error(f"Exception: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"status": 500, "error": "Internal server error"},
+        content={"status": 500, "error": "服务器内部错误"},
     )
 
 
-# CORS middleware'''
-        
+# CORS 中间件'''
+
         # Add CORS configuration if enabled
         if self.config_reader.has_cors():
-            app_content += '''
+            app_content += """
 allow_origins = [x.strip() for x in settings.cors.CORS_ALLOWED_ORIGINS.split(',') if x.strip()]
 allow_methods = [x.strip() for x in settings.cors.CORS_ALLOW_METHODS.split(',') if x.strip()]
 allow_headers = [x.strip() for x in settings.cors.CORS_ALLOW_HEADERS.split(',') if x.strip()]
@@ -162,37 +171,37 @@ app.add_middleware(
     allow_headers=allow_headers,
     allow_credentials=allow_credentials,
     expose_headers=expose_headers,
-)'''
-        
+)"""
+
         app_content += '''
 
 
-# Static files
+# 静态文件
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
-# Health check endpoint
+# 健康检查接口
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Health check endpoint"""
+    """健康检查接口"""
     return {"status": "healthy"}
 
 
-# OpenAPI documentation
+# OpenAPI 文档
 def custom_openapi():
-    """Custom OpenAPI documentation"""
+    """自定义 OpenAPI 文档"""
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title=settings.app.APP_NAME,
         version=settings.app.APP_VERSION,
         description=settings.app.APP_DESCRIPTION,
         routes=app.routes,
     )
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
@@ -200,29 +209,29 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 
-# Start application
+# 启动应用
 if __name__ == "__main__":
     if os.getenv("ENV") == "development":
-        logger.info("🚩 Starting the application in development mode...")
+        logger.info("🚩 正在以开发模式启动应用...")
         uvicorn.run(
             app="app.main:app",
             host="127.0.0.1",
             port=8000,
             reload=True,
         )'''
-        
+
         content = lifespan_content + app_content
-        
+
         self.file_ops.create_python_file(
             file_path="app/main.py",
-            docstring="FastAPI application main entry point",
+            docstring="FastAPI 应用主入口",
             imports=imports,
             content=content,
-            overwrite=True
+            overwrite=True,
         )
-    
+
     def _generate_main_with_auth(self) -> None:
-        """Generate main.py with authentication"""
+        """生成包含认证功能的 main.py"""
         imports = [
             "import os",
             "import uvicorn",
@@ -236,90 +245,94 @@ if __name__ == "__main__":
             "from app.core.logger import logger_manager",
             "from app.core.database import db_manager",
         ]
-        
-        # Add Redis import if enabled
+
+        # 如果启用了 Redis，则添加 Redis 导入
         if self.config_reader.has_redis():
             imports.append("from app.core.redis import redis_manager")
-        
-        # Add router imports
+
+        # 添加路由导入
         router_imports = [
             "    auth_router,",
             "    user_router,",
         ]
-        
-        imports.extend([
-            "",
-            "from app.routers.v1 import (",
-        ] + router_imports + [
-            ")",
-        ])
-        
-        # Build lifespan function
-        lifespan_content = '''# Create LoggerManager instance
+
+        imports.extend(
+            [
+                "",
+                "from app.routers.v1 import (",
+            ]
+            + router_imports
+            + [
+                ")",
+            ]
+        )
+
+        # 构建 lifespan 函数
+        lifespan_content = '''# 创建 LoggerManager 实例
 logger_manager.setup()
 
-# Create Logger instance
+# 创建 Logger 实例
 logger = logger_manager.get_logger(__name__)
 
 
-# Create lifespan
+# 创建 lifespan
 async def lifespan(_app: FastAPI):
-    """Application lifespan management"""
-    logger.info("🚩 Starting the application...")
-    logger.info(f"🚧 You are working in {os.getenv('ENV', 'development')} environment")
-    
+    """应用生命周期管理"""
+    logger.info("🚩 应用正在启动...")
+    logger.info(f"🚧 当前运行环境：{os.getenv('ENV', 'development')}")
+
     try:
-        # Initialize database connection
+        # 初始化数据库连接
         await db_manager.initialize()
-        logger.info("🎉 Database connections initialized successfully")
+        logger.info("🎉 数据库连接初始化成功")
         await db_manager.test_connections()
-        logger.info("🎉 Database connections test successfully")
+        logger.info("🎉 数据库连接测试成功")
     except Exception as e:
-        logger.error(f"❌ Database connection failed: {e}")
-        logger.warning("⚠️ Application will start without database connections")'''
-        
-        # Add Redis initialization if enabled
+        logger.error(f"❌ 数据库连接失败：{e}")
+        logger.warning("⚠️ 应用将在未建立数据库连接的情况下启动")'''
+
+        # 如果启用了 Redis，则添加 Redis 初始化逻辑
         if self.config_reader.has_redis():
-            lifespan_content += '''
-    
+            lifespan_content += """
+
     try:
-        # Initialize Redis connection
+        # 初始化 Redis 连接
         await redis_manager.initialize_async()
-        logger.info("🎉 Redis connections initialized successfully")
+        logger.info("🎉 Redis 连接初始化成功")
         await redis_manager.async_test_connection()
-        logger.info("🎉 Redis connections test successfully")
+        logger.info("🎉 Redis 连接测试成功")
     except Exception as e:
-        logger.error(f"❌ Redis connection failed: {e}")
-        logger.warning("⚠️ Application will start without Redis connections")'''
-        
-        lifespan_content += '''
-    
+        logger.error(f"❌ Redis 连接失败：{e}")
+        logger.warning("⚠️ 应用将在未建立 Redis 连接的情况下启动")"""
+
+        lifespan_content += """
+
     yield
-    
-    # Close database connection
+
+    # 关闭数据库连接
     try:
         await db_manager.close()
-        logger.info("🎉 Database connections closed successfully")
+        logger.info("🎉 数据库连接已成功关闭")
     except Exception as e:
-        logger.error(f"❌ Database connection closed failed: {e}")
-        logger.warning("⚠️ Database connection closed failed")'''
-        
-        # Add Redis cleanup if enabled
+        logger.error(f"❌ 数据库连接关闭失败：{e}")
+        logger.warning("⚠️ 数据库连接关闭失败")"""
+
+        # 如果启用了 Redis，则添加 Redis 清理逻辑
         if self.config_reader.has_redis():
-            lifespan_content += '''
-    
-    # Close Redis connections
+            lifespan_content += """
+
+    # 关闭 Redis 连接
     try:
         await redis_manager.close()
-        logger.info("🎉 Redis connections closed successfully")
+        logger.info("🎉 Redis 连接已成功关闭")
     except Exception as e:
-        logger.error(f"❌ Redis connection closed failed: {e}")
-        logger.warning("⚠️ Redis connection closed failed")'''
-        
-        # Build main app content
+        logger.error(f"❌ Redis 连接关闭失败：{e}")
+        logger.warning("⚠️ Redis 连接关闭失败")"""
+
+        # 构建主应用内容
         app_content = '''
 
-# Create FastAPI instance
+# 创建 FastAPI 实例
 app = FastAPI(
     lifespan=lifespan,
     title=settings.app.APP_NAME,
@@ -328,18 +341,18 @@ app = FastAPI(
 )
 
 
-# Global exception handlers
+# 全局异常处理器
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_request: Request, exc: HTTPException):
-    """HTTP exception handler"""
+    """HTTP 异常处理器"""
     logger.error(f"HTTPException: {exc}")
     error_detail = exc.detail
-    
+
     if isinstance(error_detail, dict):
         error_message = error_detail.get("error", str(error_detail))
     else:
         error_message = str(error_detail)
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content={"status": exc.status_code, "error": error_message},
@@ -348,19 +361,19 @@ async def http_exception_handler(_request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(_request: Request, exc: Exception):
-    """General exception handler"""
+    """通用异常处理器"""
     logger.error(f"Exception: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"status": 500, "error": "Internal server error"},
+        content={"status": 500, "error": "服务器内部错误"},
     )
 
 
-# CORS middleware'''
-        
+# CORS 中间件'''
+
         # Add CORS configuration if enabled
         if self.config_reader.has_cors():
-            app_content += '''
+            app_content += """
 allow_origins = [x.strip() for x in settings.cors.CORS_ALLOWED_ORIGINS.split(',') if x.strip()]
 allow_methods = [x.strip() for x in settings.cors.CORS_ALLOW_METHODS.split(',') if x.strip()]
 allow_headers = [x.strip() for x in settings.cors.CORS_ALLOW_HEADERS.split(',') if x.strip()]
@@ -374,9 +387,9 @@ app.add_middleware(
     allow_headers=allow_headers,
     allow_credentials=allow_credentials,
     expose_headers=expose_headers,
-)'''
-        
-        app_content += '''
+)"""
+
+        app_content += """
 
 
 # Static files
@@ -387,31 +400,31 @@ if os.path.exists(static_dir):
 
 # Include routers
 app.include_router(auth_router, prefix="/api/v1")
-app.include_router(user_router, prefix="/api/v1")'''
-        
+app.include_router(user_router, prefix="/api/v1")"""
+
         app_content += '''
 
 
-# Health check endpoint
+# 健康检查接口
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Health check endpoint"""
+    """健康检查接口"""
     return {"status": "healthy"}
 
 
-# OpenAPI documentation
+# OpenAPI 文档
 def custom_openapi():
-    """Custom OpenAPI documentation"""
+    """自定义 OpenAPI 文档"""
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title=settings.app.APP_NAME,
         version=settings.app.APP_VERSION,
         description=settings.app.APP_DESCRIPTION,
         routes=app.routes,
     )
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
@@ -419,22 +432,23 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 
-# Start application
+# 启动应用
 if __name__ == "__main__":
     if os.getenv("ENV") == "development":
-        logger.info("🚩 Starting the application in development mode...")
+        logger.info("🚩 正在以开发模式启动应用...")
         uvicorn.run(
             app="app.main:app",
             host="127.0.0.1",
             port=8000,
             reload=True,
         )'''
-        
+
+
         content = lifespan_content + app_content
-        
+
         self.file_ops.create_python_file(
             file_path="app/main.py",
-            docstring="FastAPI application main entry point",
+            docstring="FastAPI 应用主入口",
             imports=imports,
             content=content,
             overwrite=True

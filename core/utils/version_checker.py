@@ -1,4 +1,4 @@
-"""Version checker utility"""
+"""版本检查工具"""
 import json
 import urllib.request
 import urllib.error
@@ -12,10 +12,10 @@ import questionary
 
 
 def get_latest_version() -> Optional[str]:
-    """Get latest version from PyPI"""
+    """从 PyPI 获取最新版本号"""
     try:
         with urllib.request.urlopen(
-            "https://pypi.org/pypi/ningfastforge/json", 
+            "https://pypi.org/pypi/ningfastforge/json",
             timeout=3
         ) as response:
             data = json.loads(response.read().decode())
@@ -25,114 +25,114 @@ def get_latest_version() -> Optional[str]:
 
 
 def compare_versions(current: str, latest: str) -> Tuple[bool, str]:
-    """Compare current and latest versions
-    
-    Returns:
-        Tuple of (is_outdated, comparison_result)
+    """比较当前版本与最新版本
+
+    返回：
+        (是否需要更新, 版本比较结果说明)
     """
     try:
         current_ver = version.parse(current.lstrip('v'))
         latest_ver = version.parse(latest.lstrip('v'))
-        
+
         if current_ver < latest_ver:
             return True, f"{current} < {latest}"
         elif current_ver > latest_ver:
-            return False, f"{current} > {latest} (dev version)"
+            return False, f"{current} > {latest}（开发版本）"
         else:
-            return False, f"{current} = {latest} (up to date)"
+            return False, f"{current} = {latest}（已是最新）"
     except Exception:
-        return False, "Unable to compare versions"
+        return False, "无法比较版本号"
 
 
 def auto_update() -> bool:
-    """Attempt to auto-update the package
-    
-    Returns:
-        True if update was successful, False otherwise
+    """尝试自动更新当前包
+
+    返回：
+        更新成功返回 True，否则返回 False
     """
     try:
-        console.print("[yellow]🔄 Updating Forge...[/yellow]")
-        
-        # Try different update commands based on how it was installed
+        console.print("[yellow]🔄 正在更新 Forge...[/yellow]")
+
+        # 根据不同的安装方式尝试不同的更新命令
         update_commands = [
             [sys.executable, "-m", "pip", "install", "--upgrade", "ningfastforge"],
             ["pip", "install", "--upgrade", "ningfastforge"],
             ["pip3", "install", "--upgrade", "ningfastforge"],
         ]
-        
+
         for cmd in update_commands:
             try:
                 result = subprocess.run(
-                    cmd, 
-                    capture_output=True, 
-                    text=True, 
+                    cmd,
+                    capture_output=True,
+                    text=True,
                     timeout=60
                 )
                 if result.returncode == 0:
-                    console.print("[green]✅ Update successful![/green]")
-                    console.print("[dim]Please restart the command to use the new version.[/dim]")
+                    console.print("[green]✅ 更新成功！[/green]")
+                    console.print("[dim]请重新运行命令以使用新版本。[/dim]")
                     return True
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 continue
-        
-        console.print("[red]❌ Auto-update failed. Please update manually:[/red]")
+
+        console.print("[red]❌ 自动更新失败，请手动更新：[/red]")
         console.print("[bold]pip install --upgrade ningfastforge[/bold]")
         return False
-        
+
     except Exception as e:
-        console.print(f"[red]❌ Update error: {e}[/red]")
+        console.print(f"[red]❌ 更新出错：{e}[/red]")
         return False
 
 
 def check_for_updates(silent: bool = False, interactive: bool = True) -> bool:
-    """Check for updates and optionally show notification
-    
-    Args:
-        silent: If True, don't show any output
-        interactive: If True, offer to auto-update
-        
-    Returns:
-        True if update is available, False otherwise
+    """检查是否有可用更新，并根据配置显示提示
+
+    参数：
+        silent: 为 True 时不输出任何提示
+        interactive: 为 True 时提供交互式自动更新选项
+
+    返回：
+        如果有新版本可用则返回 True，否则返回 False
     """
     latest = get_latest_version()
     if not latest:
         if not silent:
-            console.print("[dim yellow]⚠️  Unable to check for updates[/dim yellow]")
+            console.print("[dim yellow]⚠️  无法检查更新[/dim yellow]")
         return False
-    
+
     is_outdated, comparison = compare_versions(__version__, latest)
-    
+
     if is_outdated and not silent:
         if interactive:
             show_interactive_update_prompt(latest)
         else:
             show_update_notification(latest)
-    
+
     return is_outdated
 
 
 def show_interactive_update_prompt(latest_version: str) -> None:
-    """Show interactive update prompt with auto-update option"""
+    """显示带有自动更新选项的交互式更新提示"""
     colors = get_colors()
-    
+
     console.print()
-    console.print(f"[bold {colors.warning}]📦 Update Available![/bold {colors.warning}]")
-    console.print(f"[{colors.text_secondary}]Current version:[/{colors.text_secondary}] [bold]{__version__}[/bold]")
-    console.print(f"[{colors.text_secondary}]Latest version:[/{colors.text_secondary}] [bold {colors.success}]{latest_version}[/bold {colors.success}]")
+    console.print(f"[bold {colors.warning}]📦 发现新版本！[/bold {colors.warning}]")
+    console.print(f"[{colors.text_secondary}]当前版本：[/{colors.text_secondary}] [bold]{__version__}[/bold]")
+    console.print(f"[{colors.text_secondary}]最新版本：[/{colors.text_secondary}] [bold {colors.success}]{latest_version}[/bold {colors.success}]")
     console.print()
-    
-    # Show update command first
-    console.print(f"[{colors.text_secondary}]To update manually, run:[/{colors.text_secondary}]")
+
+    # 先显示手动更新命令
+    console.print(f"[{colors.text_secondary}]手动更新请执行：[/{colors.text_secondary}]")
     console.print(f"[bold {colors.primary}]pip install --upgrade ningfastforge[/bold {colors.primary}]")
     console.print()
-    
+
     try:
-        # Ask user if they want to update now
+        # 询问用户是否现在更新
         choice = questionary.select(
-            "Would you like to update now?",
+            "是否现在更新？",
             choices=[
-                "✅ Yes, update automatically",
-                "⏭️  No, continue with current version"
+                "✅ 是，自动更新",
+                "⏭️  否，继续使用当前版本"
             ],
             style=questionary.Style([
                 ('question', 'bold'),
@@ -142,23 +142,23 @@ def show_interactive_update_prompt(latest_version: str) -> None:
                 ('answer', 'fg:#C084FC bold')
             ])
         ).ask()
-        
-        if choice == "✅ Yes, update automatically":
+
+        if choice == "✅ 是，自动更新":
             success = auto_update()
             if success:
-                console.print("[bold green]🎉 Update completed! Please restart your command.[/bold green]")
+                console.print("[bold green]🎉 更新完成！请重新运行命令。[/bold green]")
                 sys.exit(0)
-        # For "No, continue", just continue without doing anything
-        
+        # 如果选择“不更新”，则继续执行后续逻辑
+
     except (KeyboardInterrupt, EOFError):
-        # User pressed Ctrl+C, just continue
+        # 用户按下 Ctrl+C，直接继续
         console.print()
 
 
 def show_update_notification(latest_version: str) -> None:
-    """Show update notification"""
+    """显示非交互式更新提示"""
     colors = get_colors()
-    
-    console.print(f"[{colors.text_secondary}]To update, run:[/{colors.text_secondary}]")
+
+    console.print(f"[{colors.text_secondary}]更新命令：[/{colors.text_secondary}]")
     console.print(f"[bold {colors.primary}]pip install --upgrade ningfastforge[/bold {colors.primary}]")
     console.print()

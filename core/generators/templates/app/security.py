@@ -8,19 +8,19 @@ from .base import BaseTemplateGenerator
     category="app_config",
     priority=19,
     enabled_when=lambda c: c.has_auth(),
-    description="Generate security utilities (app/core/security.py)"
+    description="生成安全工具 (app/core/security.py)"
 )
 class SecurityGenerator(BaseTemplateGenerator):
     """Security management generator"""
-    
+
     def generate(self) -> None:
         """generate app/core/security.py"""
         if not self.config_reader.has_auth():
             return
-        
+
         auth_type = self.config_reader.get_auth_type()
         has_refresh_token = self.config_reader.has_refresh_token()
-        
+
         imports = [
             "import re",
             "from datetime import datetime, timedelta, timezone",
@@ -31,120 +31,124 @@ class SecurityGenerator(BaseTemplateGenerator):
             "from app.core.logger import logger_manager",
             "from app.core.config.settings import settings",
         ]
-        
+
         content = self._generate_security_content(has_refresh_token)
-        
+
         self.file_ops.create_python_file(
             file_path="app/core/security.py",
             docstring="Security management module - Password validation, hashing and JWT management",
             imports=imports,
             content=content,
-            overwrite=True
+            overwrite=True,
         )
-    
+
     def _generate_security_content(self, has_refresh_token: bool) -> str:
-        """Generate security management content"""
-        
-        # Password validator
+        """生成安全管理核心内容"""
+
+        # =========================
+        # 密码校验器
+        # =========================
         password_validator = '''logger = logger_manager.get_logger(__name__)
 
 
 class PasswordValidator:
-    """Handles password validation and strength checking"""
-    
+    """密码校验器，用于校验密码强度"""
+
     PASSWORD_PATTERNS = {
         "uppercase": r"[A-Z]",
         "lowercase": r"[a-z]",
         "digit": r"\\d",
         "special": r"[!@#$%^&*(),.?\\\":{}|<>]",
     }
-    
+
     def __init__(self, min_length: int = 8):
         self.min_length = min_length
         self.logger = logger
-    
+
     def validate(self, password: str) -> bool:
-        """Validates password strength against multiple criteria.
-        
-        Raises ValueError if any condition is not met.
+        """校验密码强度
+
+        如不满足任一条件将抛出 ValueError
         """
         self._check_length(password)
         self._check_uppercase(password)
         self._check_lowercase(password)
         self._check_digit(password)
         self._check_special_char(password)
-        self.logger.info("Password passed strength validation.")
+        self.logger.info("密码强度校验通过。")
         return True
-    
+
     def _check_length(self, password: str):
         if len(password) < self.min_length:
-            self.logger.warning("Password validation failed: too short.")
+            self.logger.warning("密码校验失败：长度不足。")
             raise ValueError(
-                f"Password must be at least {self.min_length} characters long."
+                f"密码长度至少需要 {self.min_length} 位。"
             )
-    
+
     def _check_uppercase(self, password: str):
         if not re.search(self.PASSWORD_PATTERNS["uppercase"], password):
-            self.logger.warning("Password validation failed: no uppercase letter.")
-            raise ValueError("Password must contain at least one uppercase letter.")
-    
+            self.logger.warning("密码校验失败：缺少大写字母。")
+            raise ValueError("密码必须至少包含一个大写字母。")
+
     def _check_lowercase(self, password: str):
         if not re.search(self.PASSWORD_PATTERNS["lowercase"], password):
-            self.logger.warning("Password validation failed: no lowercase letter.")
-            raise ValueError("Password must contain at least one lowercase letter.")
-    
+            self.logger.warning("密码校验失败：缺少小写字母。")
+            raise ValueError("密码必须至少包含一个小写字母。")
+
     def _check_digit(self, password: str):
         if not re.search(self.PASSWORD_PATTERNS["digit"], password):
-            self.logger.warning("Password validation failed: no digit.")
-            raise ValueError("Password must contain at least one digit.")
-    
+            self.logger.warning("密码校验失败：缺少数字。")
+            raise ValueError("密码必须至少包含一个数字。")
+
     def _check_special_char(self, password: str):
         if not re.search(self.PASSWORD_PATTERNS["special"], password):
-            self.logger.warning("Password validation failed: no special character.")
-            raise ValueError("Password must contain at least one special character.")
+            self.logger.warning("密码校验失败：缺少特殊字符。")
+            raise ValueError("密码必须至少包含一个特殊字符。")
 '''
-        
-        # Passwordhashgenerator
+
+        # =========================
+        # 密码哈希器（Argon2）
+        # =========================
         password_hasher = '''
 
 class PasswordHasher:
-    """Handles password hashing and verification using Argon2 only"""
-    
+    """密码哈希与校验（仅使用 Argon2）"""
+
     def __init__(self):
         self.logger = logger_manager.get_logger(__name__)
-        # useArgon2 - highperformanceconfiguration
+        # 使用 Argon2 的高安全性配置
         self.ph = argon2.PasswordHasher(
-            time_cost=2,  # Time cost (iteration count) - optimize performance
-            memory_cost=65536,  # Memory cost (64MB)
-            parallelism=1,  # Parallelism
-            hash_len=32,  # Hash length
-            salt_len=16,  # Salt length
+            time_cost=2,
+            memory_cost=65536,  # 64MB
+            parallelism=1,
+            hash_len=32,
+            salt_len=16,
         )
-        self.logger.info("Using Argon2 for password hashing")
-    
+        self.logger.info("已启用 Argon2 进行密码哈希")
+
     def hash(self, password: str) -> str:
-        """Hash the password using Argon2"""
+        """使用 Argon2 对密码进行哈希"""
         try:
             hashed = self.ph.hash(password)
-            self.logger.debug("Password hashed successfully with Argon2")
+            self.logger.debug("密码已成功进行 Argon2 哈希")
             return hashed
         except Exception as e:
-            self.logger.error(f"Error hashing password with Argon2: {e}")
+            self.logger.error(f"Argon2 哈希失败: {e}")
             raise
-    
+
     def verify(self, plain_password: str, hashed_password: str) -> bool:
-        """Verify a plain password against a hashed password"""
+        """校验明文密码与哈希密码是否匹配"""
         try:
             self.ph.verify(hashed_password, plain_password)
             return True
         except argon2.exceptions.VerifyMismatchError:
-            self.logger.debug("Password verification failed")
+            self.logger.debug("密码校验失败")
             return False
         except Exception as e:
-            self.logger.error(f"Error verifying password: {e}")
+            self.logger.error(f"密码校验异常: {e}")
             return False
 '''
-        
+
         # JWT manager - generate different version based on whether refresh_token exists
         if has_refresh_token:
             jwt_manager = '''

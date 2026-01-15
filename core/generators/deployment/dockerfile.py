@@ -1,4 +1,4 @@
-"""Dockerfile generator"""
+"""Dockerfile 生成器"""
 from core.decorators import Generator
 from ..templates.base import BaseTemplateGenerator
 
@@ -7,109 +7,109 @@ from ..templates.base import BaseTemplateGenerator
     category="deployment",
     priority=100,
     enabled_when=lambda c: c.has_docker(),
-    description="Generate Dockerfile"
+    description="生成 Dockerfile"
 )
 class DockerfileGenerator(BaseTemplateGenerator):
-    """Dockerfile file generator"""
-    
+    """Dockerfile 文件生成器"""
+
     def generate(self) -> None:
-        """generate Dockerfile"""
+        """生成 Dockerfile"""
         content = self._build_base_image()
         content += self._build_working_directory()
         content += self._build_dependencies()
         content += self._build_app_copy()
         content += self._build_expose()
         content += self._build_command()
-        
+
         self.file_ops.create_file(
             file_path="Dockerfile",
             content=content,
             overwrite=True
         )
-    
+
     def _build_base_image(self) -> str:
-        """Build base image"""
-        return '''# Use official Python runtime as base image
+        """构建基础镜像"""
+        return '''# 使用官方 Python 运行时作为基础镜像
 FROM python:3.10-slim
 
 '''
-    
+
     def _build_working_directory(self) -> str:
-        """Build working directory"""
-        return '''# Set working directory
+        """构建工作目录"""
+        return '''# 设置工作目录
 WORKDIR /app
 
 '''
-    
+
     def _build_dependencies(self) -> str:
-        """Build dependency installation"""
-        content = '''# Install system dependencies
+        """构建依赖安装步骤"""
+        content = '''# 安装系统级依赖
 RUN apt-get update && apt-get install -y \\
     gcc \\
     && rm -rf /var/lib/apt/lists/*
 
 '''
-        
-        # Add database client based on database type
+
+        # 根据数据库类型安装对应的客户端库
         db_type = self.config_reader.get_database_type()
         if db_type == "PostgreSQL":
-            content += '''# Install PostgreSQL client libraries
+            content += '''# 安装 PostgreSQL 客户端库
 RUN apt-get update && apt-get install -y \\
     libpq-dev \\
     && rm -rf /var/lib/apt/lists/*
 
 '''
         elif db_type == "MySQL":
-            content += '''# Install MySQL client libraries
+            content += '''# 安装 MySQL 客户端库
 RUN apt-get update && apt-get install -y \\
     default-libmysqlclient-dev \\
     && rm -rf /var/lib/apt/lists/*
 
 '''
-        
-        content += '''# Copy dependency files and alembic configuration
+
+        content += '''# 复制依赖文件和 Alembic 配置
 COPY pyproject.toml README.md alembic.ini ./
 COPY alembic ./alembic
 
-# Install Python dependencies
+# 安装 Python 依赖
 RUN pip install --no-cache-dir --upgrade pip && \\
     pip install --no-cache-dir -e .
 
 '''
         return content
-    
+
     def _build_app_copy(self) -> str:
-        """Build application copy"""
-        content = '''# Copy application code
+        """构建应用代码拷贝步骤"""
+        content = '''# 复制应用代码
 COPY ./app ./app
 
-# Copy environment configuration
+# 复制环境变量配置
 COPY ./secret ./secret
 
 '''
-        
-        # Copy static directory if complete auth is enabled (for email templates)
+
+        # 若启用完整认证，复制静态文件（邮件模板）
         if self.config_reader.get_auth_type() == 'complete':
-            content += '''# Copy static files (email templates)
+            content += '''# 复制静态文件（邮件模板）
 COPY ./static ./static
 
 '''
-        
-        content += '''# Set Python path to include current directory
+
+        content += '''# 设置 Python 路径包含当前目录
 ENV PYTHONPATH=/app
 
 '''
         return content
-    
+
     def _build_expose(self) -> str:
-        """Build port exposure"""
-        return '''# Expose port
+        """构建端口暴露配置"""
+        return '''# 暴露端口
 EXPOSE 8000
 
 '''
-    
+
     def _build_command(self) -> str:
-        """Build startup command"""
-        return '''# Startup command
+        """构建启动命令"""
+        return '''# 启动命令
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 '''

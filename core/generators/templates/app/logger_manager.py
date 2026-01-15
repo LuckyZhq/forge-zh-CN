@@ -1,4 +1,4 @@
-"""Logger Manager generategenerator"""
+"""日志管理器生成器"""
 from core.decorators import Generator
 from ..base import BaseTemplateGenerator
 
@@ -7,13 +7,13 @@ from ..base import BaseTemplateGenerator
     category="app_config",
     priority=13,
     requires=["ConfigLoggerGenerator"],
-    description="Generate logger manager (app/core/logger.py)"
+    description="生成日志管理器 (app/core/logger.py)"
 )
 class LoggerManagerGenerator(BaseTemplateGenerator):
-    """generate app/core/logger.py file - Logger managementgenerator"""
-    
+    """生成 app/core/logger.py 文件 —— 日志管理器"""
+
     def generate(self) -> None:
-        """generate Logger Manager file"""
+        """生成日志管理器文件"""
         imports = [
             "import sys",
             "import logging",
@@ -23,11 +23,11 @@ class LoggerManagerGenerator(BaseTemplateGenerator):
             "",
             "from app.core.config.settings import settings",
         ]
-        
+
         content = '''class LoggerManager:
-    """Logging management generator
+    """日志管理器
     
-    Use Loguru as logging library, provides unified logging management interface
+    使用 Loguru 作为日志库，提供统一的日志管理接口
     """
     
     def __init__(self):
@@ -35,14 +35,14 @@ class LoggerManagerGenerator(BaseTemplateGenerator):
         self._loggers = {}
     
     def setup(self) -> None:
-        """Initializeloggingconfiguration"""
+        """初始化日志配置"""
         if self._initialized:
             return
         
-        # removedefault handler
+        # 移除 Loguru 默认的 handler
         logger.remove()
         
-        # Console output
+        # 控制台输出
         if settings.logging.LOG_TO_CONSOLE:
             logger.add(
                 sys.stdout,
@@ -54,7 +54,7 @@ class LoggerManagerGenerator(BaseTemplateGenerator):
                 colorize=True,
             )
         
-        # fileoutput
+        # 文件输出
         if settings.logging.LOG_TO_FILE:
             log_path = Path(settings.logging.LOG_FILE_PATH)
             log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,24 +69,24 @@ class LoggerManagerGenerator(BaseTemplateGenerator):
                 encoding="utf-8",
             )
         
-        # Intercept standard library logging
+        # 拦截标准库 logging
         self._intercept_standard_logging()
         
         self._initialized = True
-        logger.info("Logger initialized successfully")
+        logger.info("日志系统初始化成功")
     
     def _intercept_standard_logging(self) -> None:
-        """Intercept standard library logging, redirect to Loguru"""
+        """拦截标准库 logging，并重定向到 Loguru"""
         
         class InterceptHandler(logging.Handler):
             def emit(self, record: logging.LogRecord) -> None:
-                # Get corresponding Loguru level
+                # 获取对应的 Loguru 日志级别
                 try:
                     level = logger.level(record.levelname).name
                 except ValueError:
                     level = record.levelno
                 
-                # Find caller
+                # 查找调用栈位置
                 frame, depth = logging.currentframe(), 2
                 while frame.f_code.co_filename == logging.__file__:
                     frame = frame.f_back
@@ -96,21 +96,21 @@ class LoggerManagerGenerator(BaseTemplateGenerator):
                     level, record.getMessage()
                 )
         
-        # Intercept standard library logging
+        # 拦截标准库 logging
         logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
         
-        # Intercept common library logging
+        # 拦截常见第三方库日志
         for logger_name in ["uvicorn", "uvicorn.access", "uvicorn.error", "fastapi"]:
             logging.getLogger(logger_name).handlers = [InterceptHandler()]
     
     def get_logger(self, name: Optional[str] = None):
-        """Get logger instance
+        """获取日志实例
         
-        Args:
-            name: Logger name, usually use __name__
+        参数：
+            name: 日志名称，通常使用 __name__
         
-        Returns:
-            logger instance
+        返回：
+            Loguru logger 实例
         """
         if not self._initialized:
             self.setup()
@@ -120,13 +120,13 @@ class LoggerManagerGenerator(BaseTemplateGenerator):
         return logger
 
 
-# Createglobalsingleton
+# 创建全局单例
 logger_manager = LoggerManager()
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/core/logger.py",
-            docstring="Logger managementgeneratormodule",
+            docstring="日志管理模块",
             imports=imports,
             content=content,
             overwrite=True

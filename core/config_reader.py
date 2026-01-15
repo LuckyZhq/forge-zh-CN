@@ -18,7 +18,7 @@ class ConfigReader:
     # Configuration validation rules
     REQUIRED_FIELDS = ['project_name', 'database', 'features']
     VALID_DATABASE_TYPES = ['PostgreSQL', 'MySQL', 'SQLite']
-    VALID_ORM_TYPES = ['SQLModel', 'SQLAlchemy']
+    VALID_ORM_TYPES = ['SQLModel']
     VALID_AUTH_TYPES = ['basic', 'complete']
     
     def __init__(self, project_path: Path):

@@ -1,4 +1,4 @@
-"""Rate limiting decorator generator"""
+"""限流装饰器生成器"""
 from core.decorators import Generator
 from ..base import BaseTemplateGenerator
 
@@ -6,14 +6,14 @@ from ..base import BaseTemplateGenerator
 @Generator(
     category="decorator",
     priority=85,
-    description="Generate rate limiting decorator (app/decorators/rate_limit.py)"
+    description="生成限流装饰器 (app/decorators/rate_limit.py)"
 )
 class RateLimitDecoratorGenerator(BaseTemplateGenerator):
-    """Rate limiting decorator generator"""
-    
+    """限流装饰器生成器"""
+
     def generate(self) -> None:
-        """Generate rate limiting decorator file"""
-        content = '''"""Rate limiting decorator for API endpoints"""
+        """生成限流装饰器文件"""
+        content = '''"""API 接口限流装饰器"""
 import time
 from functools import wraps
 from typing import Dict, Callable
@@ -22,14 +22,15 @@ from collections import defaultdict
 
 
 class RateLimiter:
-    """Simple in-memory rate limiter
+    """简单的内存级限流器
     
-    Note: This is a basic implementation suitable for single-instance applications.
-    For production with multiple instances, consider using Redis-based rate limiting.
+    注意：
+        这是一个仅适用于单实例应用的基础实现。
+        在多实例或分布式生产环境中，建议使用基于 Redis 的限流方案。
     """
     
     def __init__(self):
-        # Store: {identifier: [(timestamp, count), ...]}
+        # 存储结构: {identifier: [timestamp, ...]}
         self.requests: Dict[str, list] = defaultdict(list)
     
     def is_allowed(
@@ -38,30 +39,30 @@ class RateLimiter:
         max_requests: int,
         window_seconds: int
     ) -> bool:
-        """Check if request is allowed based on rate limit
+        """判断当前请求是否允许通过限流规则
         
-        Args:
-            identifier: Unique identifier (e.g., IP address, user ID)
-            max_requests: Maximum number of requests allowed
-            window_seconds: Time window in seconds
+        参数：
+            identifier: 唯一标识（如 IP 地址、用户 ID）
+            max_requests: 时间窗口内允许的最大请求数
+            window_seconds: 时间窗口（秒）
             
-        Returns:
-            True if request is allowed, False otherwise
+        返回：
+            bool: 允许返回 True，否则返回 False
         """
         current_time = time.time()
         cutoff_time = current_time - window_seconds
         
-        # Clean old requests outside the time window
+        # 清理时间窗口之外的旧请求
         self.requests[identifier] = [
             req_time for req_time in self.requests[identifier]
             if req_time > cutoff_time
         ]
         
-        # Check if limit exceeded
+        # 判断是否超过限流阈值
         if len(self.requests[identifier]) >= max_requests:
             return False
         
-        # Add current request
+        # 记录当前请求时间
         self.requests[identifier].append(current_time)
         return True
     
@@ -71,20 +72,20 @@ class RateLimiter:
         max_requests: int,
         window_seconds: int
     ) -> int:
-        """Get remaining requests in current window
+        """获取当前时间窗口内剩余可用请求次数
         
-        Args:
-            identifier: Unique identifier
-            max_requests: Maximum number of requests allowed
-            window_seconds: Time window in seconds
+        参数：
+            identifier: 唯一标识
+            max_requests: 最大允许请求数
+            window_seconds: 时间窗口（秒）
             
-        Returns:
-            Number of remaining requests
+        返回：
+            int: 剩余请求次数
         """
         current_time = time.time()
         cutoff_time = current_time - window_seconds
         
-        # Count requests in current window
+        # 统计当前时间窗口内的请求数量
         recent_requests = [
             req_time for req_time in self.requests[identifier]
             if req_time > cutoff_time
@@ -93,7 +94,7 @@ class RateLimiter:
         return max(0, max_requests - len(recent_requests))
 
 
-# Global rate limiter instance
+# 全局限流器实例
 rate_limiter = RateLimiter()
 
 
@@ -102,20 +103,20 @@ def rate_limit(
     window_seconds: int = 60,
     identifier_func: Callable[[Request], str] = None
 ):
-    """Rate limiting decorator for FastAPI endpoints
+    """FastAPI 接口限流装饰器
     
-    Args:
-        max_requests: Maximum number of requests allowed in the time window
-        window_seconds: Time window in seconds
-        identifier_func: Function to extract identifier from request (default: IP address)
+    参数：
+        max_requests: 时间窗口内允许的最大请求数
+        window_seconds: 时间窗口（秒）
+        identifier_func: 从 Request 中提取唯一标识的函数（默认使用客户端 IP）
         
-    Example:
+    示例：
         @router.get("/api/data")
         @rate_limit(max_requests=10, window_seconds=60)
         async def get_data(request: Request):
             return {"data": "value"}
         
-        # Custom identifier (e.g., user ID)
+        # 自定义标识（例如用户 ID）
         @router.get("/api/user-data")
         @rate_limit(
             max_requests=50,
@@ -128,7 +129,7 @@ def rate_limit(
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            # Extract request from args/kwargs
+            # 从参数中提取 Request 对象
             request = None
             for arg in args:
                 if isinstance(arg, Request):
@@ -138,20 +139,22 @@ def rate_limit(
                 request = kwargs.get('request')
             
             if not request:
-                raise ValueError("Request object not found in function arguments")
+                raise ValueError("未在函数参数中找到 Request 对象")
             
-            # Get identifier (default: client IP)
+            # 获取唯一标识（默认使用客户端 IP）
             if identifier_func:
                 identifier = identifier_func(request)
             else:
                 identifier = request.client.host if request.client else "unknown"
             
-            # Check rate limit
+            # 检查是否超过限流
             if not rate_limiter.is_allowed(identifier, max_requests, window_seconds):
-                remaining = rate_limiter.get_remaining(identifier, max_requests, window_seconds)
+                remaining = rate_limiter.get_remaining(
+                    identifier, max_requests, window_seconds
+                )
                 raise HTTPException(
                     status_code=429,
-                    detail=f"Rate limit exceeded. Try again in {window_seconds} seconds.",
+                    detail=f"请求过于频繁，请在 {window_seconds} 秒后重试。",
                     headers={
                         "X-RateLimit-Limit": str(max_requests),
                         "X-RateLimit-Remaining": str(remaining),
@@ -159,26 +162,26 @@ def rate_limit(
                     }
                 )
             
-            # Execute the endpoint
+            # 执行原始接口函数
             return await func(*args, **kwargs)
         
         return wrapper
     return decorator
 
 
-# Predefined rate limit decorators for common use cases
+# 常用限流装饰器封装
 def rate_limit_strict(func):
-    """Strict rate limit: 10 requests per minute"""
+    """严格限流：每分钟最多 10 次请求"""
     return rate_limit(max_requests=10, window_seconds=60)(func)
 
 
 def rate_limit_moderate(func):
-    """Moderate rate limit: 100 requests per minute"""
+    """中等限流：每分钟最多 100 次请求"""
     return rate_limit(max_requests=100, window_seconds=60)(func)
 
 
 def rate_limit_relaxed(func):
-    """Relaxed rate limit: 1000 requests per hour"""
+    """宽松限流：每小时最多 1000 次请求"""
     return rate_limit(max_requests=1000, window_seconds=3600)(func)
 '''
         

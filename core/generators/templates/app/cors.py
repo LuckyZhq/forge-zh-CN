@@ -1,4 +1,4 @@
-"""CORS Configuration file generator"""
+"""CORS 配置文件生成器"""
 from core.decorators import Generator
 from ..base import BaseTemplateGenerator
 
@@ -8,50 +8,50 @@ from ..base import BaseTemplateGenerator
     priority=14,
     requires=["ConfigBaseGenerator"],
     enabled_when=lambda c: c.has_cors(),
-    description="Generate CORS configuration (app/core/config/modules/cors.py)"
+    description="生成 CORS 配置 (app/core/config/modules/cors.py)"
 )
 class ConfigCorsGenerator(BaseTemplateGenerator):
-    """generate app/core/config/modules/cors.py file"""
-    
+    """生成 app/core/config/modules/cors.py 文件"""
+
     def generate(self) -> None:
-        """generate CORS configurationfile"""
-        # onlyenable CORS whengenerate
+        """生成 CORS 配置文件"""
+        # 仅在启用 CORS 时生成
         if not self.config_reader.has_cors():
             return
-        
+
         imports = [
             "from pydantic import Field",
             "from app.core.config.base import EnvBaseSettings",
         ]
-        
+
         content = '''class CORSSettings(EnvBaseSettings):
-    """CORS (Cross-Origin Resource Sharing) configuration"""
+    """CORS（跨域资源共享）配置"""
     
     CORS_ALLOWED_ORIGINS: str = Field(
         default='https://heyxiaoli.com',
-        description="Allowed CORS origins (comma-separated)",
+        description="允许的 CORS 来源（以逗号分隔）",
     )
     CORS_ALLOW_CREDENTIALS: bool = Field(
         default=True,
-        description="Generate CORS configuration (app/core/config/modules/cors.py)"
+        description="是否允许携带凭证（cookies）"
     )
     CORS_ALLOW_METHODS: str = Field(
         default='GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD,TRACE,CONNECT',
-        description="Allowed HTTP methods (comma-separated)",
+        description="允许的 HTTP 方法（以逗号分隔）",
     )
     CORS_ALLOW_HEADERS: str = Field(
         default='Authorization,Content-Type,X-Language,Accept-Language',
-        description="Allowed HTTP headers (comma-separated)",
+        description="允许的 HTTP 头部（以逗号分隔）",
     )
     CORS_EXPOSE_HEADERS: str = Field(
         default='Content-Disposition,Content-Length,Content-Type,ETag,Last-Modified',
-        description="Exposed HTTP headers (comma-separated)",
+        description="暴露的 HTTP 头部（以逗号分隔）",
     )
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/core/config/modules/cors.py",
-            docstring="CORS configurationmodule",
+            docstring="CORS 配置模块",
             imports=imports,
             content=content,
             overwrite=True

@@ -1,4 +1,4 @@
-"""database dependency injectionFile generator"""
+"""数据库依赖注入文件生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -8,48 +8,48 @@ from ..base import BaseTemplateGenerator
     category="database",
     priority=32,
     requires=["DatabaseConnectionGenerator"],
-    description="Generate database dependencies (app/core/database/__init__.py)"
+    description="生成数据库依赖 (app/core/database/dependencies.py)"
 )
 class DatabaseDependenciesGenerator(BaseTemplateGenerator):
-    """database dependency injectiongenerategenerator"""
-    
+    """数据库依赖注入生成器"""
+
     def generate(self) -> None:
-        """generate app/core/database/dependencies.py"""
-        # onlyenableauthenticationwhengenerate dependencies.py
+        """生成 app/core/database/dependencies.py"""
+        # 仅在启用认证时生成 dependencies.py
         if not self.config_reader.has_auth():
             return
-        
+
         db_type = self.config_reader.get_database_type()
         auth_type = self.config_reader.get_auth_type()
-        
-        # determine management based on database typegeneratorname
+
+        # 根据数据库类型确定对应的管理器
         if db_type == "PostgreSQL":
             db_manager = "postgresql_manager"
             db_import = "from app.core.database.postgresql import postgresql_manager"
         else:  # MySQL
             db_manager = "mysql_manager"
             db_import = "from app.core.database.mysql import mysql_manager"
-        
+
         imports = [
             "from fastapi import Depends, HTTPException, Response",
             "from sqlalchemy.ext.asyncio import AsyncSession",
             "from sqlalchemy import func",
         ]
-        
-        # Add imports based on ORM type
+
+        # 根据 ORM 类型添加不同的 select 导入
         orm_type = self.config_reader.get_orm_type()
         if orm_type == "SQLModel":
             imports.append("from sqlmodel import select")
         else:
             imports.append("from sqlalchemy import select")
-        
+
         imports.extend([
             "from fastapi.security import APIKeyCookie",
             db_import,
             "from app.core.logger import logger_manager",
         ])
-        
-        # Add different imports and content based on authentication type
+
+        # 根据认证类型生成不同的依赖注入内容
         if auth_type == "complete":
             imports.extend([
                 "from app.crud.auth_crud import get_auth_crud",
@@ -57,38 +57,38 @@ class DatabaseDependenciesGenerator(BaseTemplateGenerator):
                 "from app.core.security import security_manager",
                 "from app.core.config.settings import settings",
             ])
-            
+
             content = self._generate_complete_auth_dependencies(db_manager)
         else:  # basic
             imports.extend([
                 "from app.crud.user_crud import get_user_crud",
                 "from app.core.security import security_manager",
             ])
-            
+
             content = self._generate_basic_auth_dependencies(db_manager)
-        
+
         self.file_ops.create_python_file(
             file_path="app/core/database/dependencies.py",
-            docstring="FastAPI dependenciesinjection",
+            docstring="FastAPI 数据库依赖注入",
             imports=imports,
             content=content,
             overwrite=True
         )
-    
+
     def _generate_complete_auth_dependencies(self, db_manager: str) -> str:
-        """Generate complete authentication dependency injection code"""
+        """生成完整认证模式下的依赖注入代码"""
         return f'''get_access_token_cookie = APIKeyCookie(
     name="access_token",
     auto_error=False,
     scheme_name="Bearer",
-    description="Access token for authentication",
+    description="用于身份认证的访问令牌",
 )
 
 get_refresh_token_cookie = APIKeyCookie(
     name="refresh_token",
     auto_error=False,
     scheme_name="Bearer",
-    description="Refresh token for authentication",
+    description="用于刷新身份的刷新令牌",
 )
 
 
@@ -105,34 +105,34 @@ class Dependencies:
         access_token: str = Depends(get_access_token_cookie),
         db: AsyncSession = Depends({db_manager}.get_db),
     ):
-        """Getcurrentuser(needauthentication)"""
+        """获取当前用户（需要认证）"""
         self.logger.info(
-            f"get_current_user called with access_token: "
+            f"调用 get_current_user，access_token: "
             f"{{'***' if access_token else 'None'}}"
         )
         
         if not access_token:
-            self.logger.warning("No access_token provided in request")
+            self.logger.warning("请求中未提供 access_token")
             raise HTTPException(
                 status_code=401,
-                detail="Unauthorized access",
+                detail="未授权访问",
             )
         
-        # Validate access token
+        # 校验访问令牌
         try:
-            self.logger.info("Attempting to decode access token")
+            self.logger.info("开始解析 access_token")
             token_data = security_manager.decode_token(access_token)
             
             if token_data:
                 self.logger.info(
-                    f"Token decoded successfully, user_id: {{token_data.get('user_id')}}"
+                    f"令牌解析成功，user_id: {{token_data.get('user_id')}}"
                 )
                 user_id = token_data.get("user_id")
                 
                 if user_id:
-                    self.logger.info(f"Validating token in database for user_id: {{user_id}}")
+                    self.logger.info(f"在数据库中校验 token，user_id: {{user_id}}")
                     
-                    # Validate access token validity in database
+                    # 在数据库中校验 access token 的有效性
                     valid_access_token = await db.execute(
                         select(Token).where(
                             Token.user_id == user_id,
@@ -144,9 +144,9 @@ class Dependencies:
                     valid_token = valid_access_token.scalar_one_or_none()
                     
                     if valid_token:
-                        self.logger.info(f"Valid token found in database: {{valid_token.id}}")
+                        self.logger.info(f"数据库中存在有效 token: {{valid_token.id}}")
                         
-                        # Get user information from database
+                        # 获取用户信息
                         user = await self.auth_crud.get_user_by_id(user_id)
                         
                         if (
@@ -155,60 +155,60 @@ class Dependencies:
                             and user.is_verified
                             and not user.is_deleted
                         ):
-                            self.logger.info(f"User authenticated via access token: {{user.email}}")
+                            self.logger.info(f"用户通过 access_token 认证: {{user.email}}")
                             return user
                         else:
                             self.logger.warning(
-                                f"User validation failed - "
+                                f"用户状态校验失败 - "
                                 f"active: {{user.is_active if user else 'N/A'}}, "
                                 f"verified: {{user.is_verified if user else 'N/A'}}, "
                                 f"deleted: {{user.is_deleted if user else 'N/A'}}"
                             )
                     else:
-                        self.logger.warning(f"No valid token found in database for user_id: {{user_id}}")
+                        self.logger.warning(f"数据库中未找到有效 token，user_id: {{user_id}}")
                 else:
-                    self.logger.warning("No user_id found in decoded token")
+                    self.logger.warning("解析后的 token 中未包含 user_id")
             else:
-                self.logger.warning("Token decode returned None")
+                self.logger.warning("令牌解析结果为空")
         except Exception as e:
-            self.logger.warning(f"Access token validation failed: {{str(e)}}")
+            self.logger.warning(f"access_token 校验失败: {{str(e)}}")
         
-        # If all tokens are invalid, raise unauthorized error
-        self.logger.warning("All token validation attempts failed")
+        # 所有校验失败，返回未授权
+        self.logger.warning("所有令牌校验均失败")
         raise HTTPException(
             status_code=401,
-            detail="Unauthorized access",
+            detail="未授权访问",
         )
     
     async def cleanup_tokens(
         self,
         response: Response,
     ) -> bool:
-        """cleanuser tokens(logouthouruse)"""
+        """清理用户令牌（用于登出）"""
         response.delete_cookie(
             "access_token",
             domain=settings.domain.COOKIE_DOMAIN,
             path="/",
         )
-        self.logger.info("Access token cookie deleted")
+        self.logger.info("access_token Cookie 已删除")
         
         response.delete_cookie(
             "refresh_token",
             domain=settings.domain.COOKIE_DOMAIN,
             path="/",
         )
-        self.logger.info("Refresh token cookie deleted")
+        self.logger.info("refresh_token Cookie 已删除")
         
         return True
 '''
-    
+
     def _generate_basic_auth_dependencies(self, db_manager: str) -> str:
-        """Generate basic authentication dependency injection code"""
+        """生成基础认证模式下的依赖注入代码"""
         return f'''get_access_token_cookie = APIKeyCookie(
     name="access_token",
     auto_error=False,
     scheme_name="Bearer",
-    description="Access token for authentication",
+    description="用于身份认证的访问令牌",
 )
 
 
@@ -225,54 +225,54 @@ class Dependencies:
         access_token: str = Depends(get_access_token_cookie),
         db: AsyncSession = Depends({db_manager}.get_db),
     ):
-        """Getcurrentuser(needauthentication)"""
+        """获取当前用户（需要认证）"""
         self.logger.info(
-            f"get_current_user called with access_token: "
+            f"调用 get_current_user，access_token: "
             f"{{'***' if access_token else 'None'}}"
         )
         
         if not access_token:
-            self.logger.warning("No access_token provided in request")
+            self.logger.warning("请求中未提供 access_token")
             raise HTTPException(
                 status_code=401,
-                detail="Unauthorized access",
+                detail="未授权访问",
             )
         
-        # Validate access token
+        # 校验访问令牌
         try:
-            self.logger.info("Attempting to decode access token")
+            self.logger.info("开始解析 access_token")
             token_data = security_manager.decode_token(access_token)
             
             if token_data:
                 self.logger.info(
-                    f"Token decoded successfully, user_id: {{token_data.get('user_id')}}"
+                    f"令牌解析成功，user_id: {{token_data.get('user_id')}}"
                 )
                 user_id = token_data.get("user_id")
                 
                 if user_id:
-                    # Get user information from database
+                    # 从数据库获取用户信息
                     user = await self.user_crud.get_user_by_id(user_id)
                     
                     if user and user.is_active and not user.is_deleted:
-                        self.logger.info(f"User authenticated: {{user.email}}")
+                        self.logger.info(f"用户认证成功: {{user.email}}")
                         return user
                     else:
                         self.logger.warning(
-                            f"User validation failed - "
+                            f"用户状态校验失败 - "
                             f"active: {{user.is_active if user else 'N/A'}}, "
                             f"deleted: {{user.is_deleted if user else 'N/A'}}"
                         )
                 else:
-                    self.logger.warning("No user_id found in decoded token")
+                    self.logger.warning("解析后的 token 中未包含 user_id")
             else:
-                self.logger.warning("Token decode returned None")
+                self.logger.warning("令牌解析结果为空")
         except Exception as e:
-            self.logger.warning(f"Access token validation failed: {{str(e)}}")
+            self.logger.warning(f"access_token 校验失败: {{str(e)}}")
         
-        # If validation fails, raise unauthorized error
-        self.logger.warning("Token validation failed")
+        # 校验失败，返回未授权
+        self.logger.warning("令牌校验失败")
         raise HTTPException(
             status_code=401,
-            detail="Unauthorized access",
+            detail="未授权访问",
         )
 '''

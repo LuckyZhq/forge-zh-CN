@@ -1,4 +1,4 @@
-"""loggingConfiguration file generator - generate Pydantic configurationclass"""
+"""日志配置文件生成器 - 生成 Pydantic 配置类"""
 from core.decorators import Generator
 from ..base import BaseTemplateGenerator
 
@@ -7,55 +7,55 @@ from ..base import BaseTemplateGenerator
     category="app_config",
     priority=12,
     requires=["ConfigBaseGenerator"],
-    description="Generate logger configuration (app/core/config/modules/logger.py)"
+    description="生成日志配置 (app/core/config/modules/logger.py)"
 )
 class ConfigLoggerGenerator(BaseTemplateGenerator):
-    """generate app/core/config/modules/logger.py file - Pydantic loggingconfigurationclass"""
-    
+    """生成 app/core/config/modules/logger.py 文件 - Pydantic 日志配置类"""
+
     def generate(self) -> None:
-        """generateloggingconfigurationfile"""
+        """生成日志配置文件"""
         imports = [
             "from typing import Optional",
             "from pydantic import Field",
             "from app.core.config.base import EnvBaseSettings",
         ]
-        
+
         content = '''class LoggingSettings(EnvBaseSettings):
-    """Loguru loggingconfigurationSet"""
+    """Loguru 日志配置集"""
     
     LOG_LEVEL: str = Field(
         default="INFO",
-        description="Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL",
+        description="日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL",
     )
     LOG_TO_FILE: bool = Field(
         default=False,
-        description="Generate logger configuration (app/core/config/modules/logger.py)"
+        description="是否将日志输出到文件"
     )
     LOG_FILE_PATH: str = Field(
         default="logs/app.log",
-        description="Generate logger configuration (app/core/config/modules/logger.py)"
+        description="日志文件路径"
     )
     LOG_TO_CONSOLE: bool = Field(
         default=True,
-        description="Generate logger configuration (app/core/config/modules/logger.py)"
+        description="是否在控制台输出日志"
     )
     LOG_CONSOLE_LEVEL: str = Field(
         default="INFO",
-        description="Generate logger configuration (app/core/config/modules/logger.py)"
+        description="控制台日志级别"
     )
     LOG_ROTATION: Optional[str] = Field(
         default="1 day",
-        description="Generate logger configuration (app/core/config/modules/logger.py)"
+        description="日志轮转周期"
     )
     LOG_RETENTION_PERIOD: Optional[str] = Field(
         default="7 days",
-        description="Generate logger configuration (app/core/config/modules/logger.py)"
+        description="日志保留周期"
     )
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/core/config/modules/logger.py",
-            docstring="loggingconfigurationmodule",
+            docstring="日志配置模块",
             imports=imports,
             content=content,
             overwrite=True
