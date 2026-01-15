@@ -1,4 +1,4 @@
-"""Security management file generator"""
+"""安全管理文件生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from .base import BaseTemplateGenerator
@@ -11,10 +11,10 @@ from .base import BaseTemplateGenerator
     description="生成安全工具 (app/core/security.py)"
 )
 class SecurityGenerator(BaseTemplateGenerator):
-    """Security management generator"""
+    """安全管理生成器"""
 
     def generate(self) -> None:
-        """generate app/core/security.py"""
+        """生成 app/core/security.py"""
         if not self.config_reader.has_auth():
             return
 
@@ -36,7 +36,7 @@ class SecurityGenerator(BaseTemplateGenerator):
 
         self.file_ops.create_python_file(
             file_path="app/core/security.py",
-            docstring="Security management module - Password validation, hashing and JWT management",
+            docstring="安全管理模块 - 密码校验、哈希和 JWT 管理",
             imports=imports,
             content=content,
             overwrite=True,
@@ -149,12 +149,12 @@ class PasswordHasher:
             return False
 '''
 
-        # JWT manager - generate different version based on whether refresh_token exists
+        # JWT 管理器 - 根据是否存在 refresh_token 生成不同版本
         if has_refresh_token:
             jwt_manager = '''
 
 class JWTManager:
-    """Handles JWT token creation, decoding and validation"""
+    """处理 JWT 令牌的创建、解码和验证"""
     
     def __init__(
         self,
@@ -174,23 +174,23 @@ class JWTManager:
         self.logger = logger
     
     def timestamp_to_datetime(self, timestamp: int) -> datetime:
-        """Convert a Unix timestamp to a UTC datetime object"""
+        """将 Unix 时间戳转换为 UTC datetime 对象"""
         return datetime.fromtimestamp(timestamp, tz=timezone.utc)
     
     def create_access_token(self, data: Dict) -> tuple[str, datetime]:
-        """Create an access JWT token"""
+        """创建访问 JWT 令牌"""
         return self._create_token(data, self.access_token_expiry, "access")
     
     def create_refresh_token(self, data: Dict) -> tuple[str, datetime]:
-        """Create a refresh JWT token"""
+        """创建刷新 JWT 令牌"""
         return self._create_token(data, self.refresh_token_expiry, "refresh")
     
     def _create_token(
         self, data: Dict, expires_in_seconds: int, token_type: str
     ) -> tuple[str, datetime]:
-        """Internal method for token creation"""
+        """令牌创建的内部方法"""
         exp_time = datetime.now(timezone.utc) + timedelta(seconds=expires_in_seconds)
-        # Convert to UTC timestamp
+        # 转换为 UTC 时间戳
         payload = {
             **data,
             "exp": int(exp_time.timestamp()),
@@ -200,17 +200,17 @@ class JWTManager:
         }
         encoded_jwt = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
         self.logger.info(
-            f"{token_type} token created for user: {data.get('user_id')} "
-            f"with expiration: {payload['exp']}"
+            f"为用户创建了 {token_type} 令牌: {data.get('user_id')} "
+            f"过期时间: {payload['exp']}"
         )
         return encoded_jwt, exp_time
     
     def decode_token(
         self, token: str, expected_jti: Optional[str] = None
     ) -> Union[Dict, None]:
-        """Decode and validate a JWT token.
+        """解码和验证 JWT 令牌
         
-        Optionally verify the JTI claim if provided.
+        如果提供了 JTI，则可选地验证 JTI 声明
         """
         try:
             decoded_token = jwt.decode(
@@ -223,25 +223,25 @@ class JWTManager:
             )
             
             if expected_jti and decoded_token.get("jti") != expected_jti:
-                self.logger.error("JTI mismatch. Token invalid.")
+                self.logger.error("JTI 不匹配。令牌无效。")
                 return None
             
             self.logger.info(
-                f"Token decoded successfully for user_id: {decoded_token.get('user_id')}"
+                f"令牌解码成功，用户 ID: {decoded_token.get('user_id')}"
             )
             return decoded_token
         except ExpiredSignatureError:
-            self.logger.warning("JWT token has expired.")
+            self.logger.warning("JWT 令牌已过期。")
         except JWTError as e:
-            self.logger.error(f"Invalid JWT token: {e}")
+            self.logger.error(f"无效的 JWT 令牌: {e}")
         return None
 '''
         else:
-            # Version without refresh_token
+            # 无 refresh_token 版本
             jwt_manager = '''
 
 class JWTManager:
-    """Handles JWT token creation, decoding and validation"""
+    """处理 JWT 令牌的创建、解码和验证"""
     
     def __init__(
         self,
@@ -259,19 +259,19 @@ class JWTManager:
         self.logger = logger
     
     def timestamp_to_datetime(self, timestamp: int) -> datetime:
-        """Convert a Unix timestamp to a UTC datetime object"""
+        """将 Unix 时间戳转换为 UTC datetime 对象"""
         return datetime.fromtimestamp(timestamp, tz=timezone.utc)
     
     def create_access_token(self, data: Dict) -> tuple[str, datetime]:
-        """Create an access JWT token"""
+        """创建访问 JWT 令牌"""
         return self._create_token(data, self.access_token_expiry, "access")
     
     def _create_token(
         self, data: Dict, expires_in_seconds: int, token_type: str
     ) -> tuple[str, datetime]:
-        """Internal method for token creation"""
+        """令牌创建的内部方法"""
         exp_time = datetime.now(timezone.utc) + timedelta(seconds=expires_in_seconds)
-        # Convert to UTC timestamp
+        # 转换为 UTC 时间戳
         payload = {
             **data,
             "exp": int(exp_time.timestamp()),
@@ -281,17 +281,17 @@ class JWTManager:
         }
         encoded_jwt = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
         self.logger.info(
-            f"{token_type} token created for user: {data.get('user_id')} "
-            f"with expiration: {payload['exp']}"
+            f"为用户创建了 {token_type} 令牌: {data.get('user_id')} "
+            f"过期时间: {payload['exp']}"
         )
         return encoded_jwt, exp_time
     
     def decode_token(
         self, token: str, expected_jti: Optional[str] = None
     ) -> Union[Dict, None]:
-        """Decode and validate a JWT token.
+        """解码和验证 JWT 令牌
         
-        Optionally verify the JTI claim if provided.
+        如果提供了 JTI，则可选地验证 JTI 声明
         """
         try:
             decoded_token = jwt.decode(
@@ -304,26 +304,26 @@ class JWTManager:
             )
             
             if expected_jti and decoded_token.get("jti") != expected_jti:
-                self.logger.error("JTI mismatch. Token invalid.")
+                self.logger.error("JTI 不匹配。令牌无效。")
                 return None
             
             self.logger.info(
-                f"Token decoded successfully for user_id: {decoded_token.get('user_id')}"
+                f"令牌解码成功，用户 ID: {decoded_token.get('user_id')}"
             )
             return decoded_token
         except ExpiredSignatureError:
-            self.logger.warning("JWT token has expired.")
+            self.logger.warning("JWT 令牌已过期。")
         except JWTError as e:
-            self.logger.error(f"Invalid JWT token: {e}")
+            self.logger.error(f"无效的 JWT 令牌: {e}")
         return None
 '''
-        
-        # Security manager - generate different version based on whether refresh_token exists
+
+        # 安全管理器 - 根据是否存在 refresh_token 生成不同版本
         if has_refresh_token:
             security_manager = '''
 
 class SecurityManager:
-    """Main authentication service that orchestrates all auth operations"""
+    """编排所有认证操作的主要认证服务"""
     
     def __init__(self, settings):
         self.validator = PasswordValidator()
@@ -338,40 +338,40 @@ class SecurityManager:
         )
     
     def validate_password(self, password: str) -> bool:
-        """Validate password strength"""
+        """验证密码强度"""
         return self.validator.validate(password)
     
     def hash_password(self, password: str) -> str:
-        """Hash a password using Argon2"""
+        """使用 Argon2 哈希密码"""
         return self.hasher.hash(password)
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """Verify a password against its hash"""
+        """验证密码与其哈希值"""
         return self.hasher.verify(plain_password, hashed_password)
     
     def create_access_token(self, data: Dict) -> tuple[str, datetime]:
-        """Create an access token"""
+        """创建访问令牌"""
         return self.jwt_manager.create_access_token(data)
     
     def create_refresh_token(self, data: Dict) -> tuple[str, datetime]:
-        """Create a refresh token"""
+        """创建刷新令牌"""
         return self.jwt_manager.create_refresh_token(data)
     
     def decode_token(
         self, token: str, expected_jti: Optional[str] = None
     ) -> Union[Dict, None]:
-        """Decode and validate a token"""
+        """解码和验证令牌"""
         return self.jwt_manager.decode_token(token, expected_jti)
 
 
 security_manager = SecurityManager(settings)
 '''
         else:
-            # Version without refresh_token
+            # 无 refresh_token 版本
             security_manager = '''
 
 class SecurityManager:
-    """Main authentication service that orchestrates all auth operations"""
+    """编排所有认证操作的主要认证服务"""
     
     def __init__(self, settings):
         self.validator = PasswordValidator()
@@ -385,42 +385,42 @@ class SecurityManager:
         )
     
     def validate_password(self, password: str) -> bool:
-        """Validate password strength"""
+        """验证密码强度"""
         return self.validator.validate(password)
     
     def hash_password(self, password: str) -> str:
-        """Hash a password using Argon2"""
+        """使用 Argon2 哈希密码"""
         return self.hasher.hash(password)
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """Verify a password against its hash"""
+        """验证密码与其哈希值"""
         return self.hasher.verify(plain_password, hashed_password)
     
     def create_access_token(self, data: Dict) -> tuple[str, datetime]:
-        """Create an access token"""
+        """创建访问令牌"""
         return self.jwt_manager.create_access_token(data)
     
     def decode_token(
         self, token: str, expected_jti: Optional[str] = None
     ) -> Union[Dict, None]:
-        """Decode and validate a token"""
+        """解码和验证令牌"""
         return self.jwt_manager.decode_token(token, expected_jti)
 
 
 security_manager = SecurityManager(settings)
 '''
-        
-        # Convenience functions
+
+        # 便捷函数
         convenience_functions = '''
 
-# Convenience functions (backward compatible)
+# 便捷函数（向后兼容）
 def get_password_hash(password: str) -> str:
-    """Hash password - convenience function"""
+    """哈希密码 - 便捷函数"""
     return security_manager.hash_password(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password - convenience function"""
+    """验证密码 - 便捷函数"""
     return security_manager.verify_password(plain_password, hashed_password)
 '''
         

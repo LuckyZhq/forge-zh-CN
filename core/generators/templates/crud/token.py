@@ -1,4 +1,4 @@
-"""Token CRUD generategenerator"""
+"""令牌 CRUD 生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,25 +9,25 @@ from ..base import BaseTemplateGenerator
     priority=61,
     requires=["TokenModelGenerator", "TokenSchemaGenerator"],
     enabled_when=lambda c: c.get_auth_type() == 'complete',
-    description="Generate token CRUD operations (app/crud/token.py)"
+    description="生成令牌 CRUD 操作 (app/crud/token.py)"
 )
 class TokenCRUDGenerator(BaseTemplateGenerator):
-    """Token CRUD File generator"""
-    
+    """令牌 CRUD 文件生成器"""
+
     def generate(self) -> None:
-        """generate Token CRUD file
-        
-        Note: This generator is called by Orchestrator when Complete JWT Auth is enabled and database is configured
+        """生成令牌 CRUD 文件
+
+        注意：当启用完整 JWT 认证并配置数据库时，此生成器由编排器调用
         """
         orm_type = self.config_reader.get_orm_type()
-        
+
         if orm_type == "SQLModel":
             self._generate_sqlmodel_crud()
         elif orm_type == "SQLAlchemy":
             self._generate_sqlalchemy_crud()
-    
+
     def _generate_sqlmodel_crud(self) -> None:
-        """Generate SQLModel Token CRUD operations"""
+        """生成 SQLModel 令牌 CRUD 操作"""
         imports = [
             "import secrets",
             "from datetime import datetime, timedelta",
@@ -36,9 +36,9 @@ class TokenCRUDGenerator(BaseTemplateGenerator):
             "from sqlmodel import select",
             "from app.models.token import RefreshToken, VerificationCode",
         ]
-        
+
         content = '''class RefreshTokenCRUD:
-    """Refresh token CRUD operations class"""
+    """刷新令牌 CRUD 操作类"""
     
     @staticmethod
     async def create(
@@ -51,7 +51,7 @@ class TokenCRUDGenerator(BaseTemplateGenerator):
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> RefreshToken:
-        """Createrefreshtoken"""
+        """创建刷新令牌"""
         db_token = RefreshToken(
             user_id=user_id,
             token=token,
@@ -69,7 +69,7 @@ class TokenCRUDGenerator(BaseTemplateGenerator):
     
     @staticmethod
     async def get_by_token(db: AsyncSession, token: str) -> Optional[RefreshToken]:
-        """Get refresh token by token string"""
+        """通过令牌字符串获取刷新令牌"""
         statement = select(RefreshToken).where(
             RefreshToken.token == token,
             RefreshToken.is_revoked == False
@@ -83,7 +83,7 @@ class TokenCRUDGenerator(BaseTemplateGenerator):
         user_id: int,
         include_revoked: bool = False
     ) -> List[RefreshToken]:
-        """Getuserallrefreshtoken"""
+        """获取用户的所有刷新令牌"""
         statement = select(RefreshToken).where(RefreshToken.user_id == user_id)
         
         if not include_revoked:
@@ -94,7 +94,7 @@ class TokenCRUDGenerator(BaseTemplateGenerator):
     
     @staticmethod
     async def update_last_used(db: AsyncSession, token_id: int) -> Optional[RefreshToken]:
-        """Update token last used time"""
+        """更新令牌最后使用时间"""
         db_token = await db.get(RefreshToken, token_id)
         if not db_token:
             return None
@@ -107,7 +107,7 @@ class TokenCRUDGenerator(BaseTemplateGenerator):
     
     @staticmethod
     async def revoke(db: AsyncSession, token: str) -> bool:
-        """Revoke refresh token"""
+        """撤销刷新令牌"""
         db_token = await RefreshTokenCRUD.get_by_token(db, token)
         if not db_token:
             return False
@@ -119,7 +119,7 @@ class TokenCRUDGenerator(BaseTemplateGenerator):
     
     @staticmethod
     async def revoke_user_tokens(db: AsyncSession, user_id: int) -> int:
-        """Revoke all user refresh tokens"""
+        """撤销用户的所有刷新令牌"""
         tokens = await RefreshTokenCRUD.get_user_tokens(db, user_id, include_revoked=False)
         
         count = 0
@@ -133,7 +133,7 @@ class TokenCRUDGenerator(BaseTemplateGenerator):
     
     @staticmethod
     async def cleanup_expired(db: AsyncSession) -> int:
-        """cleanexpirationtoken"""
+        """清理过期令牌"""
         statement = select(RefreshToken).where(
             RefreshToken.expires_at < datetime.utcnow(),
             RefreshToken.is_revoked == False
@@ -152,11 +152,11 @@ class TokenCRUDGenerator(BaseTemplateGenerator):
 
 
 class VerificationCodeCRUD:
-    """Verification code CRUD operations class"""
+    """验证码 CRUD 操作类"""
     
     @staticmethod
     def generate_code(length: int = 6) -> str:
-        """Generate numeric verification code"""
+        """生成数字验证码"""
         return "".join([str(secrets.randbelow(10)) for _ in range(length)])
     
     @staticmethod
@@ -167,7 +167,7 @@ class VerificationCodeCRUD:
         expiration_minutes: int = 60,
         max_attempts: int = 5,
     ) -> VerificationCode:
-        """Create verification code"""
+        """创建验证码"""
         code = VerificationCodeCRUD.generate_code()
         
         db_code = VerificationCode(
@@ -190,7 +190,7 @@ class VerificationCodeCRUD:
         code: str,
         code_type: str
     ) -> Optional[VerificationCode]:
-        """Get verification code"""
+        """获取验证码"""
         statement = select(VerificationCode).where(
             VerificationCode.user_id == user_id,
             VerificationCode.code == code,
@@ -207,22 +207,22 @@ class VerificationCodeCRUD:
         code: str,
         code_type: str
     ) -> Optional[VerificationCode]:
-        """Verify verification code"""
+        """验证验证码"""
         db_code = await VerificationCodeCRUD.get(db, user_id, code, code_type)
         
         if not db_code:
             return None
         
-        # Increment attempt count
+        # 增加尝试次数
         db_code.increment_attempts()
         db.add(db_code)
         await db.commit()
         
-        # Checkwhethervalid
+        # 检查是否有效
         if not db_code.is_valid():
             return None
         
-        # Mark as used
+        # 标记为已使用
         db_code.mark_as_used()
         db.add(db_code)
         await db.commit()
@@ -236,7 +236,7 @@ class VerificationCodeCRUD:
         user_id: int,
         code_type: str
     ) -> Optional[VerificationCode]:
-        """Get user's latest verification code"""
+        """获取用户的最新验证码"""
         statement = select(VerificationCode).where(
             VerificationCode.user_id == user_id,
             VerificationCode.code_type == code_type
@@ -247,7 +247,7 @@ class VerificationCodeCRUD:
     
     @staticmethod
     async def invalidate_user_codes(db: AsyncSession, user_id: int, code_type: str) -> int:
-        """Invalidate all unused user verification codes"""
+        """使所有未使用的用户验证码失效"""
         statement = select(VerificationCode).where(
             VerificationCode.user_id == user_id,
             VerificationCode.code_type == code_type,
@@ -267,7 +267,7 @@ class VerificationCodeCRUD:
     
     @staticmethod
     async def cleanup_expired(db: AsyncSession) -> int:
-        """Clean up expired verification codes"""
+        """清理过期的验证码"""
         statement = select(VerificationCode).where(
             VerificationCode.expires_at < datetime.utcnow(),
             VerificationCode.is_used == False
@@ -285,21 +285,21 @@ class VerificationCodeCRUD:
         return count
 
 
-# Createglobalinstance
+# 创建全局实例
 refresh_token_crud = RefreshTokenCRUD()
 verification_code_crud = VerificationCodeCRUD()
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/crud/token.py",
-            docstring="Token and verification code CRUD operations",
+            docstring="令牌和验证码 CRUD 操作",
             imports=imports,
             content=content,
             overwrite=True
         )
-    
+
     def _generate_sqlalchemy_crud(self) -> None:
-        """Generate SQLAlchemy Token CRUD operations"""
+        """生成 SQLAlchemy 令牌 CRUD 操作"""
         imports = [
             "import secrets",
             "from datetime import datetime, timedelta",
@@ -308,9 +308,9 @@ verification_code_crud = VerificationCodeCRUD()
             "from sqlalchemy import select",
             "from app.models.token import RefreshToken, VerificationCode",
         ]
-        
+
         content = '''class RefreshTokenCRUD:
-    """Refresh token CRUD operations class"""
+    """刷新令牌 CRUD 操作类"""
     
     @staticmethod
     async def create(
@@ -323,7 +323,7 @@ verification_code_crud = VerificationCodeCRUD()
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> RefreshToken:
-        """Createrefreshtoken"""
+        """创建刷新令牌"""
         db_token = RefreshToken(
             user_id=user_id,
             token=token,
@@ -341,7 +341,7 @@ verification_code_crud = VerificationCodeCRUD()
     
     @staticmethod
     async def get_by_token(db: AsyncSession, token: str) -> Optional[RefreshToken]:
-        """Get refresh token by token string"""
+        """通过令牌字符串获取刷新令牌"""
         statement = select(RefreshToken).where(
             RefreshToken.token == token,
             RefreshToken.is_revoked == False
@@ -355,7 +355,7 @@ verification_code_crud = VerificationCodeCRUD()
         user_id: int,
         include_revoked: bool = False
     ) -> List[RefreshToken]:
-        """Getuserallrefreshtoken"""
+        """获取用户的所有刷新令牌"""
         statement = select(RefreshToken).where(RefreshToken.user_id == user_id)
         
         if not include_revoked:
@@ -366,7 +366,7 @@ verification_code_crud = VerificationCodeCRUD()
     
     @staticmethod
     async def update_last_used(db: AsyncSession, token_id: int) -> Optional[RefreshToken]:
-        """Update token last used time"""
+        """更新令牌最后使用时间"""
         statement = select(RefreshToken).where(RefreshToken.id == token_id)
         result = await db.execute(statement)
         db_token = result.scalar_one_or_none()
@@ -380,7 +380,7 @@ verification_code_crud = VerificationCodeCRUD()
     
     @staticmethod
     async def revoke(db: AsyncSession, token: str) -> bool:
-        """Revoke refresh token"""
+        """撤销刷新令牌"""
         db_token = await RefreshTokenCRUD.get_by_token(db, token)
         if not db_token:
             return False
@@ -391,7 +391,7 @@ verification_code_crud = VerificationCodeCRUD()
     
     @staticmethod
     async def revoke_user_tokens(db: AsyncSession, user_id: int) -> int:
-        """Revoke all user refresh tokens"""
+        """撤销用户的所有刷新令牌"""
         tokens = await RefreshTokenCRUD.get_user_tokens(db, user_id, include_revoked=False)
         
         count = 0
@@ -404,7 +404,7 @@ verification_code_crud = VerificationCodeCRUD()
     
     @staticmethod
     async def cleanup_expired(db: AsyncSession) -> int:
-        """cleanexpirationtoken"""
+        """清理过期令牌"""
         statement = select(RefreshToken).where(
             RefreshToken.expires_at < datetime.utcnow(),
             RefreshToken.is_revoked == False
@@ -422,11 +422,11 @@ verification_code_crud = VerificationCodeCRUD()
 
 
 class VerificationCodeCRUD:
-    """Verification code CRUD operations class"""
+    """验证码 CRUD 操作类"""
     
     @staticmethod
     def generate_code(length: int = 6) -> str:
-        """Generate numeric verification code"""
+        """生成数字验证码"""
         return "".join([str(secrets.randbelow(10)) for _ in range(length)])
     
     @staticmethod
@@ -437,7 +437,7 @@ class VerificationCodeCRUD:
         expiration_minutes: int = 60,
         max_attempts: int = 5,
     ) -> VerificationCode:
-        """Create verification code"""
+        """创建验证码"""
         code = VerificationCodeCRUD.generate_code()
         
         db_code = VerificationCode(
@@ -460,7 +460,7 @@ class VerificationCodeCRUD:
         code: str,
         code_type: str
     ) -> Optional[VerificationCode]:
-        """Get verification code"""
+        """获取验证码"""
         statement = select(VerificationCode).where(
             VerificationCode.user_id == user_id,
             VerificationCode.code == code,
@@ -477,21 +477,21 @@ class VerificationCodeCRUD:
         code: str,
         code_type: str
     ) -> Optional[VerificationCode]:
-        """Verify verification code"""
+        """验证验证码"""
         db_code = await VerificationCodeCRUD.get(db, user_id, code, code_type)
         
         if not db_code:
             return None
         
-        # Increment attempt count
+        # 增加尝试次数
         db_code.increment_attempts()
         await db.commit()
         
-        # Checkwhethervalid
+        # 检查是否有效
         if not db_code.is_valid():
             return None
         
-        # Mark as used
+        # 标记为已使用
         db_code.mark_as_used()
         await db.commit()
         await db.refresh(db_code)
@@ -504,7 +504,7 @@ class VerificationCodeCRUD:
         user_id: int,
         code_type: str
     ) -> Optional[VerificationCode]:
-        """Get user's latest verification code"""
+        """获取用户的最新验证码"""
         statement = select(VerificationCode).where(
             VerificationCode.user_id == user_id,
             VerificationCode.code_type == code_type
@@ -514,7 +514,7 @@ class VerificationCodeCRUD:
     
     @staticmethod
     async def invalidate_user_codes(db: AsyncSession, user_id: int, code_type: str) -> int:
-        """Invalidate all unused user verification codes"""
+        """使所有未使用的用户验证码失效"""
         statement = select(VerificationCode).where(
             VerificationCode.user_id == user_id,
             VerificationCode.code_type == code_type,
@@ -533,7 +533,7 @@ class VerificationCodeCRUD:
     
     @staticmethod
     async def cleanup_expired(db: AsyncSession) -> int:
-        """Clean up expired verification codes"""
+        """清理过期的验证码"""
         statement = select(VerificationCode).where(
             VerificationCode.expires_at < datetime.utcnow(),
             VerificationCode.is_used == False
@@ -550,14 +550,14 @@ class VerificationCodeCRUD:
         return count
 
 
-# Createglobalinstance
+# 创建全局实例
 refresh_token_crud = RefreshTokenCRUD()
 verification_code_crud = VerificationCodeCRUD()
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/crud/token.py",
-            docstring="Token and verification code CRUD operations - SQLAlchemy",
+            docstring="令牌和验证码 CRUD 操作 - SQLAlchemy",
             imports=imports,
             content=content,
             overwrite=True

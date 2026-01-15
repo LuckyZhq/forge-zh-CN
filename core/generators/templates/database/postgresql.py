@@ -1,4 +1,4 @@
-"""PostgreSQL database managementgeneratorgenerategenerator"""
+"""PostgreSQL 数据库管理生成器"""
 from core.decorators import Generator
 from pathlib import Path
 from ..base import BaseTemplateGenerator
@@ -9,19 +9,19 @@ from ..base import BaseTemplateGenerator
     priority=31,
     requires=["DatabaseConnectionGenerator"],
     enabled_when=lambda c: c.get_database_type() == 'PostgreSQL',
-    description="Generate PostgreSQL database manager (app/core/database/postgresql.py)"
+    description="生成 PostgreSQL 数据库管理器 (app/core/database/postgresql.py)"
 )
 class DatabasePostgreSQLGenerator(BaseTemplateGenerator):
-    """PostgreSQL database managementgeneratorgenerategenerator"""
-    
+    """PostgreSQL 数据库管理生成器"""
+
     def generate(self) -> None:
-        """generate app/core/database/postgresql.py"""
+        """生成 app/core/database/postgresql.py"""
         db_type = self.config_reader.get_database_type()
         if db_type != "PostgreSQL":
             return
-        
+
         orm_type = self.config_reader.get_orm_type()
-        
+
         imports = [
             "from collections.abc import AsyncGenerator",
             "from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession",
@@ -30,15 +30,15 @@ class DatabasePostgreSQLGenerator(BaseTemplateGenerator):
             "from app.core.logger import logger_manager",
             "from app.core.config.settings import settings",
         ]
-        
-        # add Base definition
-        base_definition = '''# SQLAlchemy declarativebase class
+
+        # 添加 Base 定义
+        base_definition = '''# SQLAlchemy 声明式基类
 Base = declarative_base()
 
 '''
-        
+
         content = base_definition + '''class PostgreSQLManager:
-    """PostgreSQL connectionmanagementgenerator - use SQLAlchemy/SQLModel ORM"""
+    """PostgreSQL 连接管理器 - 使用 SQLAlchemy/SQLModel ORM"""
     
     def __init__(self):
         self.logger = logger_manager.get_logger(__name__)
@@ -48,9 +48,9 @@ Base = declarative_base()
         self.sync_session_maker: sessionmaker | None = None
     
     def get_sqlalchemy_url(self) -> str:
-        """Build SQLAlchemy asyncconnection URL"""
+        """构建 SQLAlchemy 异步连接 URL"""
         url = settings.database.DATABASE_URL
-        # ensure using asyncpg driver
+        # 确保使用 asyncpg 驱动
         if url.startswith("postgresql://"):
             return url.replace("postgresql://", "postgresql+asyncpg://", 1)
         elif url.startswith("postgresql+psycopg2://"):
@@ -58,9 +58,9 @@ Base = declarative_base()
         return url
     
     def get_sync_sqlalchemy_url(self) -> str:
-        """Build SQLAlchemy syncconnection URL"""
+        """构建 SQLAlchemy 同步连接 URL"""
         url = settings.database.DATABASE_URL
-        # ensure using psycopg2 driver
+        # 确保使用 psycopg2 驱动
         if url.startswith("postgresql://"):
             return url.replace("postgresql://", "postgresql+psycopg2://", 1)
         elif url.startswith("postgresql+asyncpg://"):
@@ -68,15 +68,15 @@ Base = declarative_base()
         return url
     
     async def initialize(self) -> None:
-        """Initialize async connection and session (idempotent)"""
+        """初始化异步连接和会话（幂等操作）"""
         if self.async_engine:
-            self.logger.debug("PostgreSQLManager is already initialized.")
+            self.logger.debug("PostgreSQLManager 已经初始化。")
             return
         
         try:
             db = settings.database
             
-            # Initialize async engine
+            # 初始化异步引擎
             self.async_engine = create_async_engine(
                 self.get_sqlalchemy_url(),
                 echo=db.ECHO,
@@ -92,7 +92,7 @@ Base = declarative_base()
                 expire_on_commit=False,
             )
             
-            # Initialize sync engine (for background tasks)
+            # 初始化同步引擎（用于后台任务）
             self.sync_engine = create_engine(
                 self.get_sync_sqlalchemy_url(),
                 echo=db.ECHO,
@@ -108,51 +108,51 @@ Base = declarative_base()
                 expire_on_commit=False,
             )
             
-            self.logger.info("✅ PostgreSQL initialized successfully (async + sync).")
+            self.logger.info("✅ PostgreSQL 初始化成功（异步 + 同步）。")
         except Exception:
-            self.logger.exception("❌ Failed to initialize PostgreSQL.")
+            self.logger.exception("❌ PostgreSQL 初始化失败。")
             raise
     
     async def get_db(self) -> AsyncGenerator[AsyncSession, None]:
-        """FastAPI dependenciesinjectionuse：returnasyncsessiongenerategenerator"""
+        """FastAPI 依赖注入使用：返回异步会话生成器"""
         if not self.async_session_maker:
-            raise RuntimeError("Database not initialized. Call initialize() first.")
+            raise RuntimeError("数据库未初始化。请先调用 initialize()。")
         
         async with self.async_session_maker() as session:
             yield session
     
     def get_sync_db(self) -> Session:
-        """For background tasks: return sync session"""
+        """用于后台任务：返回同步会话"""
         if not self.sync_session_maker:
-            raise RuntimeError("Database not initialized. Call initialize() first.")
+            raise RuntimeError("数据库未初始化。请先调用 initialize()。")
         return self.sync_session_maker()
     
     async def test_connection(self) -> bool:
-        """testdatabase connection"""
+        """测试数据库连接"""
         if not self.async_session_maker:
-            raise RuntimeError("Database not initialized.")
+            raise RuntimeError("数据库未初始化。")
         
         try:
             async with self.async_session_maker() as session:
                 result = await session.execute(text("SELECT 1"))
                 if result.scalar() != 1:
-                    raise RuntimeError("❌ PostgreSQL connection test failed.")
-                self.logger.info("✅ PostgreSQL connection test passed.")
+                    raise RuntimeError("❌ PostgreSQL 连接测试失败。")
+                self.logger.info("✅ PostgreSQL 连接测试通过。")
                 return True
         except Exception:
-            self.logger.exception("❌ PostgreSQL connection test failed.")
+            self.logger.exception("❌ PostgreSQL 连接测试失败。")
             raise
     
     async def close(self) -> None:
-        """Close connection pool and release resources"""
+        """关闭连接池并释放资源"""
         if self.async_engine:
             try:
                 await self.async_engine.dispose()
                 self.async_engine = None
                 self.async_session_maker = None
-                self.logger.info("✅ PostgreSQL async engine disposed successfully.")
+                self.logger.info("✅ PostgreSQL 异步引擎已成功关闭。")
             except Exception:
-                self.logger.exception("❌ Failed to dispose PostgreSQL async engine.")
+                self.logger.exception("❌ PostgreSQL 异步引擎关闭失败。")
                 raise
         
         if self.sync_engine:
@@ -160,9 +160,9 @@ Base = declarative_base()
                 self.sync_engine.dispose()
                 self.sync_engine = None
                 self.sync_session_maker = None
-                self.logger.info("✅ PostgreSQL sync engine disposed successfully.")
+                self.logger.info("✅ PostgreSQL 同步引擎已成功关闭。")
             except Exception:
-                self.logger.exception("❌ Failed to dispose PostgreSQL sync engine.")
+                self.logger.exception("❌ PostgreSQL 同步引擎关闭失败。")
                 raise
     
     async def __aenter__(self) -> "PostgreSQLManager":
@@ -173,13 +173,13 @@ Base = declarative_base()
         await self.close()
 
 
-# singletoninstance
+# 单例实例
 postgresql_manager = PostgreSQLManager()
 '''
-        
+
         self.file_ops.create_python_file(
             file_path="app/core/database/postgresql.py",
-            docstring="PostgreSQL database connection managementgenerator",
+            docstring="PostgreSQL 数据库连接管理器",
             imports=imports,
             content=content,
             overwrite=True
