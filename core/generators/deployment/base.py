@@ -1,29 +1,29 @@
-"""Deployment configurationgenerategeneratorbase class"""
+"""部署配置生成器基类"""
 from pathlib import Path
 from typing import Optional
 
 
 class DeploymentFileGenerator:
-    """deploymentConfiguration file generator base class"""
-    
+    """部署配置文件生成器基类"""
+
     def __init__(self, project_path: Path):
-        """InitializeDeployment configurationgenerategenerator
-        
+        """初始化部署配置生成器
+
         Args:
-            project_path: Project root directory path
+            project_path: 项目根目录路径
         """
         self.project_path = Path(project_path)
-    
+
     def generate(self, content: str, filename: str, subdir: Optional[str] = None) -> Path:
-        """generateDeployment configurationfile
-        
+        """生成部署配置文件
+
         Args:
-            content: File content
-            filename: File name
-            subdir: Subdirectory(optional)
-            
+            content: 文件内容
+            filename: 文件名
+            subdir: 子目录(可选)
+
         Returns:
-            generateFile path
+            生成的文件路径
         """
         if subdir:
             target_dir = self.project_path / subdir

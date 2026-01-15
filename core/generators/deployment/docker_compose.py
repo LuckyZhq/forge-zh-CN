@@ -1,4 +1,4 @@
-"""Docker Compose generator"""
+"""Docker Compose 生成器"""
 from core.decorators import Generator
 from ..templates.base import BaseTemplateGenerator
 
@@ -8,30 +8,30 @@ from ..templates.base import BaseTemplateGenerator
     priority=101,
     requires=["DockerfileGenerator"],
     enabled_when=lambda c: c.has_docker(),
-    description="Generate docker-compose.yml"
+    description="生成 docker-compose.yml"
 )
 class DockerComposeGenerator(BaseTemplateGenerator):
-    """Docker Compose file generator"""
-    
+    """Docker Compose 文件生成器"""
+
     def generate(self) -> None:
-        """generate docker-compose.yml file"""
+        """生成 docker-compose.yml 文件"""
         content = self._build_version()
         content += self._build_services()
         content += self._build_volumes()
         content += self._build_networks()
-        
+
         self.file_ops.create_file(
             file_path="docker-compose.yml",
             content=content,
             overwrite=True
         )
-    
+
     def _build_version(self) -> str:
-        """Build version declaration"""
+        """构建版本声明"""
         return ''
-    
+
     def _build_services(self) -> str:
-        """Build services configuration"""
+        """构建服务配置"""
         content = '''services:
   app:
     build: .
@@ -43,8 +43,8 @@ class DockerComposeGenerator(BaseTemplateGenerator):
     environment:
       - ENV=production
 '''.format(project_name=self.config_reader.get_project_name())
-        
-        # Add database connection environment variables
+
+        # 添加数据库连接环境变量
         db_type = self.config_reader.get_database_type()
         if db_type == "PostgreSQL":
             content += '''      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/{project_name}
@@ -52,58 +52,58 @@ class DockerComposeGenerator(BaseTemplateGenerator):
         elif db_type == "MySQL":
             content += '''      - DATABASE_URL=mysql+aiomysql://root:mysql@db:3306/{project_name}
 '''.format(project_name=self.config_reader.get_project_name())
-        
-        # Add Redis environment variables if enabled
+
+        # 如果启用 Redis，添加 Redis 环境变量
         if self.config_reader.has_redis():
             content += '''      - REDIS_CONNECTION_URL=redis://redis:6379
 '''
-        
-        # Add Celery environment variables if enabled
+
+        # 如果启用 Celery，添加 Celery 环境变量
         if self.config_reader.has_celery():
             content += '''      - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
 '''
-        
-        # Build dependencies with proper conditions
+
+        # 构建带有适当条件的依赖关系
         content += '''    volumes:
       - ./app:/app/app
     depends_on:
       db-migrate:
         condition: service_completed_successfully
 '''
-        
+
         if self.config_reader.has_redis():
             content += '''      redis:
         condition: service_started
 '''
-        
+
         content += '''    restart: unless-stopped
     networks:
       - app-network
 
 '''
-        
-        # Add database service
+
+        # 添加数据库服务
         content += self._build_database_service()
-        
-        # Add database migration service
+
+        # 添加数据库迁移服务
         content += self._build_database_migration_service()
-        
-        # Add Redis service if enabled
+
+        # 如果启用 Redis，添加 Redis 服务
         if self.config_reader.has_redis():
             content += self._build_redis_service()
-        
-        # Add Celery services if enabled
+
+        # 如果启用 Celery，添加 Celery 服务
         if self.config_reader.has_celery():
             content += self._build_celery_services()
-        
+
         return content
-    
+
     def _build_database_service(self) -> str:
-        """Build database service configuration"""
+        """构建数据库服务配置"""
         db_type = self.config_reader.get_database_type()
         project_name = self.config_reader.get_project_name()
-        
+
         if db_type == "PostgreSQL":
             return '''  db:
     image: postgres:15-alpine
@@ -125,7 +125,7 @@ class DockerComposeGenerator(BaseTemplateGenerator):
       retries: 10
 
 '''.format(project_name=project_name)
-        
+
         elif db_type == "MySQL":
             return '''  db:
     image: mysql:8.0
@@ -146,18 +146,18 @@ class DockerComposeGenerator(BaseTemplateGenerator):
       retries: 10
 
 '''.format(project_name=project_name)
-        
+
         return ''
-    
+
     def _build_database_migration_service(self) -> str:
-        """Build database migration service configuration"""
+        """构建数据库迁移服务配置"""
         project_name = self.config_reader.get_project_name()
-        
-        # Build environment variables
+
+        # 构建环境变量
         env_vars = '''      - ENV=production
 '''
-        
-        # Add database connection
+
+        # 添加数据库连接
         db_type = self.config_reader.get_database_type()
         if db_type == "PostgreSQL":
             env_vars += '''      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/{project_name}
@@ -165,7 +165,7 @@ class DockerComposeGenerator(BaseTemplateGenerator):
         elif db_type == "MySQL":
             env_vars += '''      - DATABASE_URL=mysql+aiomysql://root:mysql@db:3306/{project_name}
 '''.format(project_name=project_name)
-        
+
         return '''  db-migrate:
     build: .
     container_name: {project_name}_db_migrate
@@ -184,11 +184,11 @@ class DockerComposeGenerator(BaseTemplateGenerator):
       - app-network
 
 '''.format(project_name=project_name, env_vars=env_vars)
-    
+
     def _build_redis_service(self) -> str:
-        """Build Redis service configuration"""
+        """构建 Redis 服务配置"""
         project_name = self.config_reader.get_project_name()
-        
+
         return '''  redis:
     image: redis:7-alpine
     container_name: {project_name}_redis
@@ -199,16 +199,16 @@ class DockerComposeGenerator(BaseTemplateGenerator):
       - app-network
 
 '''.format(project_name=project_name)
-    
+
     def _build_celery_services(self) -> str:
-        """Build Celery services configuration"""
+        """构建 Celery 服务配置"""
         project_name = self.config_reader.get_project_name()
-        
-        # Build environment variables
+
+        # 构建环境变量
         env_vars = '''      - ENV=production
 '''
-        
-        # Add database connection
+
+        # 添加数据库连接
         db_type = self.config_reader.get_database_type()
         if db_type == "PostgreSQL":
             env_vars += '''      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/{project_name}
@@ -216,20 +216,20 @@ class DockerComposeGenerator(BaseTemplateGenerator):
         elif db_type == "MySQL":
             env_vars += '''      - DATABASE_URL=mysql+aiomysql://root:mysql@db:3306/{project_name}
 '''.format(project_name=project_name)
-        
-        # Add Redis and Celery environment variables
+
+        # 添加 Redis 和 Celery 环境变量
         env_vars += '''      - REDIS_CONNECTION_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
 '''
-        
-        # Build dependencies with proper conditions
+
+        # 构建带有适当条件的依赖关系
         depends_on_str = '''      db-migrate:
         condition: service_completed_successfully
       redis:
         condition: service_started
 '''
-        
+
         return '''  celery-worker:
     build: .
     container_name: {project_name}_celery_worker
@@ -259,14 +259,14 @@ class DockerComposeGenerator(BaseTemplateGenerator):
       - app-network
 
 '''.format(project_name=project_name, env_vars=env_vars, depends_on_str=depends_on_str)
-    
+
     def _build_volumes(self) -> str:
-        """Build volumes configuration"""
+        """构建数据卷配置"""
         db_type = self.config_reader.get_database_type()
-        
+
         content = '''volumes:
 '''
-        
+
         if db_type == "PostgreSQL":
             content += '''  postgres_data:
 
@@ -275,11 +275,11 @@ class DockerComposeGenerator(BaseTemplateGenerator):
             content += '''  mysql_data:
 
 '''
-        
+
         return content
-    
+
     def _build_networks(self) -> str:
-        """Build networks configuration"""
+        """构建网络配置"""
         return '''networks:
   app-network:
     driver: bridge

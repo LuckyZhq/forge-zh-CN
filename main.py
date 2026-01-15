@@ -1,4 +1,4 @@
-"""Forge CLI Main Entry Point"""
+"""Forge CLI 主入口点"""
 import typer
 from typing import Optional
 
@@ -7,20 +7,20 @@ from commands.init import init_command
 from core.version import __version__
 from core.utils.version_checker import check_for_updates
 
-# Create main application
+# 创建主应用
 app = typer.Typer(
     name="forge",
-    help="Forge - A modern FastAPI project scaffolding CLI tool",
+    help="Forge - 现代化的 FastAPI 项目脚手架 CLI 工具",
     rich_markup_mode="rich",
     add_completion=False
 )
 
-# Register commands
-app.command(name="init", help="Initialize a new FastAPI project")(init_command)
+# 注册命令
+app.command(name="init", help="初始化一个新的 FastAPI 项目")(init_command)
 
 
 def version_callback(value: bool) -> None:
-    """Version information callback"""
+    """版本信息回调"""
     if value:
         typer.echo(f"Forge CLI v{__version__}")
         raise typer.Exit()
@@ -33,27 +33,27 @@ def main_callback(
         None,
         "--version",
         "-v",
-        help="Show version information",
+        help="显示版本信息",
         callback=version_callback,
         is_eager=True
     )
 ):
     """
-    Forge CLI Tool
+    Forge CLI 工具
 
-    A powerful FastAPI project scaffolding generator
+    强大的 FastAPI 项目脚手架生成器
     """
     if ctx.invoked_subcommand is None:
         show_logo()
-        typer.echo()  # Empty line
-        typer.echo(ctx.get_help())  # Show help information
-        
-        # Check for updates when showing help (non-interactive)
+        typer.echo()  # 空行
+        typer.echo(ctx.get_help())  # 显示帮助信息
+
+        # 显示帮助时检查更新（非交互式）
         check_for_updates(silent=False, interactive=False)
 
 
 def main():
-    """Main entry function"""
+    """主入口函数"""
     app()
 
 

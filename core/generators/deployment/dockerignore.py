@@ -1,4 +1,4 @@
-"""dockerignore generator"""
+"""dockerignore 生成器"""
 from core.decorators import Generator
 from ..templates.base import BaseTemplateGenerator
 
@@ -7,13 +7,13 @@ from ..templates.base import BaseTemplateGenerator
     category="deployment",
     priority=102,
     enabled_when=lambda c: c.has_docker(),
-    description="Generate .dockerignore"
+    description="生成 .dockerignore"
 )
 class DockerignoreGenerator(BaseTemplateGenerator):
-    """.dockerignore file generator"""
-    
+    """.dockerignore 文件生成器"""
+
     def generate(self) -> None:
-        """generate .dockerignore file"""
+        """生成 .dockerignore 文件"""
         content = self._build_python_section()
         content += self._build_venv_section()
         content += self._build_ide_section()
@@ -22,15 +22,15 @@ class DockerignoreGenerator(BaseTemplateGenerator):
         content += self._build_testing_section()
         content += self._build_docs_section()
         content += self._build_misc_section()
-        
+
         self.file_ops.create_file(
             file_path=".dockerignore",
             content=content,
             overwrite=True
         )
-    
+
     def _build_python_section(self) -> str:
-        """Build Python-related ignore rules"""
+        """构建 Python 相关忽略规则"""
         return '''# Python
 __pycache__
 *.py[cod]
@@ -54,9 +54,9 @@ wheels
 *.egg
 
 '''
-    
+
     def _build_venv_section(self) -> str:
-        """Build virtual environment ignore rules"""
+        """构建虚拟环境忽略规则"""
         return '''# Virtual Environment
 .venv
 venv
@@ -64,9 +64,9 @@ ENV
 env
 
 '''
-    
+
     def _build_ide_section(self) -> str:
-        """Build IDE ignore rules"""
+        """构建 IDE 忽略规则"""
         return '''# IDE
 .vscode
 .idea
@@ -75,18 +75,18 @@ env
 *~
 
 '''
-    
+
     def _build_git_section(self) -> str:
-        """Build Git ignore rules"""
+        """构建 Git 忽略规则"""
         return '''# Git
 .git
 .gitignore
 .gitattributes
 
 '''
-    
+
     def _build_env_section(self) -> str:
-        """Build environment variables ignore rules"""
+        """构建环境变量忽略规则"""
         return '''# Environment Variables
 .env
 .env.*
@@ -94,9 +94,9 @@ env
 !secret/.env.*
 
 '''
-    
+
     def _build_testing_section(self) -> str:
-        """Build testing-related ignore rules"""
+        """构建测试相关忽略规则"""
         return '''# Testing
 .pytest_cache
 .coverage
@@ -105,18 +105,18 @@ htmlcov
 tests
 
 '''
-    
+
     def _build_docs_section(self) -> str:
-        """Build documentation ignore rules"""
+        """构建文档忽略规则"""
         return '''# Documentation
 docs
 *.md
 !README.md
 
 '''
-    
+
     def _build_misc_section(self) -> str:
-        """Build miscellaneous ignore rules"""
+        """构建其他忽略规则"""
         return '''# Misc
 .DS_Store
 Thumbs.db

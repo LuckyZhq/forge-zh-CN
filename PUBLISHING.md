@@ -1,5 +1,9 @@
 # Publishing to PyPI Guide
 
+[中文文档](PUBLISHING-zh-CN.md)
+
+---
+
 Complete guide for publishing Forge to PyPI using GitHub Actions.
 
 ## Table of Contents
