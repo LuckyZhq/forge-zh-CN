@@ -16,6 +16,8 @@
 
 ---
 
+[中文文档](README-zh-CN.md)
+
 Forge is a powerful command-line tool that helps you quickly bootstrap production-ready FastAPI projects with best practices, intelligent defaults, and a beautiful interactive interface.
 
 ## ✨ Features
